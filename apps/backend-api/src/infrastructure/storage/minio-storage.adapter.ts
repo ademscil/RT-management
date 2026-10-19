@@ -3,6 +3,8 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
 } from '@aws-sdk/client-s3';
 
 export class MinioStorageAdapter {
@@ -74,5 +76,33 @@ export class MinioStorageAdapter {
     });
 
     await this.client.send(command);
+  }
+
+  /**
+   * Ensure bucket exists, create if missing
+   */
+  public async ensureBucket(bucket: string): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: bucket }));
+    } catch {
+      try {
+        await this.client.send(new CreateBucketCommand({ Bucket: bucket }));
+      } catch (err: any) {
+        if (err.name !== 'BucketAlreadyOwnedByYou' && err.name !== 'BucketAlreadyExists') {
+          console.warn(`[MinIO] Ensure bucket warning for ${bucket}:`, err.message);
+        }
+      }
+    }
+  }
+
+  public async initializeBuckets(): Promise<void> {
+    const buckets = [
+      process.env.S3_BUCKET_DOKUMEN_WARGA || 'dokumen-warga',
+      process.env.S3_BUCKET_KAS_NOTA || 'kas-nota',
+      process.env.S3_BUCKET_SURAT_ARSIP || 'surat-arsip',
+    ];
+    for (const b of buckets) {
+      await this.ensureBucket(b);
+    }
   }
 }
