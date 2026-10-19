@@ -27,4 +27,15 @@ async function start() {
   }
 }
 
-start();
+// Start standalone server only when not running inside Vercel serverless environment
+if (!process.env.VERCEL) {
+  start();
+}
+
+// Export Fastify handler for Vercel Serverless Functions
+export default async function handler(req: any, res: any) {
+  await app.ready();
+  app.server.emit('request', req, res);
+}
+
+export { app };
