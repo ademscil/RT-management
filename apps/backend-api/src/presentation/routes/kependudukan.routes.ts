@@ -164,6 +164,10 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
 
     const sanitizedKk = items.map((kk: any) => ({
       id: kk.id,
+      rumahId: kk.rumahId,
+      kodeBlok: kk.rumah.kodeBlok,
+      nomorRumah: kk.rumah.nomorRumah,
+      statusHunian: kk.rumah.statusHunian,
       noKkMasked: kk.noKkMasked,
       nomorKkMasked: kk.noKkMasked,
       blokRumah: `${kk.rumah.kodeBlok} No. ${kk.rumah.nomorRumah}`,
@@ -179,10 +183,20 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         namaLengkap: w.namaLengkap,
         nikMasked: w.nikMasked,
         hubunganKeluarga: w.hubunganKeluarga,
-        jenisKelamin: w.jenisKelamin,
+        jenisKelamin: w.gender || w.jenisKelamin,
+        gender: w.gender,
         tempatLahir: w.tempatLahir,
         tanggalLahir: w.tanggalLahir?.toISOString ? w.tanggalLahir.toISOString() : String(w.tanggalLahir),
         golonganDarah: w.golonganDarah,
+        agama: w.agama,
+        pekerjaan: w.pekerjaan,
+        pendidikanTerakhir: w.pendidikanTerakhir,
+        statusPerkawinan: w.statusPerkawinan,
+        statusKependudukan: w.statusKependudukan,
+        isLansia: w.isLansia,
+        isDisabilitas: w.isDisabilitas,
+        isBalita: w.isBalita,
+        isIbuHamil: w.isIbuHamil,
       })),
     }));
 
@@ -527,6 +541,287 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send({
         success: true,
         data: { id: created.id, namaLengkap: created.namaLengkap, nikMasked: created.nikMasked },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * PUT /api/v1/kependudukan/warga/:id (Update citizen details)
+   */
+  fastify.put(
+    '/warga/:id',
+    { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const rawBody = request.body as any;
+
+      const existing = await prisma.warga.findUnique({ where: { id } });
+      if (!existing) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const updated = await prisma.warga.update({
+        where: { id },
+        data: {
+          namaLengkap: rawBody.namaLengkap !== undefined ? rawBody.namaLengkap : existing.namaLengkap,
+          tempatLahir: rawBody.tempatLahir !== undefined ? rawBody.tempatLahir : existing.tempatLahir,
+          tanggalLahir: rawBody.tanggalLahir !== undefined ? rawBody.tanggalLahir : existing.tanggalLahir,
+          gender: rawBody.gender !== undefined ? rawBody.gender : existing.gender,
+          golonganDarah: rawBody.golonganDarah !== undefined ? rawBody.golonganDarah : existing.golonganDarah,
+          agama: rawBody.agama !== undefined ? rawBody.agama : existing.agama,
+          pendidikanTerakhir: rawBody.pendidikanTerakhir !== undefined ? rawBody.pendidikanTerakhir : existing.pendidikanTerakhir,
+          pekerjaan: rawBody.pekerjaan !== undefined ? rawBody.pekerjaan : existing.pekerjaan,
+          statusPerkawinan: rawBody.statusPerkawinan !== undefined ? rawBody.statusPerkawinan : existing.statusPerkawinan,
+          hubunganKeluarga: rawBody.hubunganKeluarga !== undefined ? rawBody.hubunganKeluarga : existing.hubunganKeluarga,
+          statusKependudukan: rawBody.statusKependudukan !== undefined ? rawBody.statusKependudukan : existing.statusKependudukan,
+          isLansia: rawBody.isLansia !== undefined ? rawBody.isLansia : existing.isLansia,
+          isDisabilitas: rawBody.isDisabilitas !== undefined ? rawBody.isDisabilitas : existing.isDisabilitas,
+          isBalita: rawBody.isBalita !== undefined ? rawBody.isBalita : existing.isBalita,
+          isIbuHamil: rawBody.isIbuHamil !== undefined ? rawBody.isIbuHamil : existing.isIbuHamil,
+        },
+      });
+
+      return reply.send({
+        success: true,
+        data: { id: updated.id, namaLengkap: updated.namaLengkap, nikMasked: updated.nikMasked },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * DELETE /api/v1/kependudukan/warga/:id (Delete citizen)
+   */
+  fastify.delete(
+    '/warga/:id',
+    { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const existing = await prisma.warga.findUnique({ where: { id } });
+      if (!existing) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      await prisma.warga.delete({ where: { id } });
+
+      return reply.send({
+        success: true,
+        message: 'Data warga berhasil dihapus.',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * POST /api/v1/kependudukan/rumah (Add new house block / kavling)
+   */
+  fastify.post(
+    '/rumah',
+    { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { kodeBlok, nomorRumah, alamat, statusHunian = 'DIHUNI_PEMILIK', nomorKk } = (request.body as any) || {};
+
+      if (!kodeBlok || !nomorRumah || !alamat) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Kode blok, nomor rumah, dan alamat wajib diisi.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Check if kodeBlok already exists
+      const existing = await prisma.rumahKavling.findUnique({ where: { kodeBlok } });
+      if (existing) {
+        return reply.status(409).send({
+          success: false,
+          error: { code: ErrorCode.ERR_CONFLICT, message: `Blok rumah ${kodeBlok} sudah terdaftar.` },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const house = await prisma.rumahKavling.create({
+        data: {
+          kodeBlok,
+          nomorRumah,
+          alamat,
+          statusHunian,
+        },
+      });
+
+      // If nomor KK is provided, also create initial KartuKeluarga
+      let createdKk = null;
+      if (nomorKk && typeof nomorKk === 'string' && nomorKk.trim().length === 16) {
+        const cleanKk = nomorKk.trim();
+        const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(cleanKk);
+        const noKkMasked = blindIndexAdapter.maskNik(cleanKk);
+        const noKkEncrypted = cryptoAdapter.encryptField(cleanKk);
+
+        createdKk = await prisma.kartuKeluarga.create({
+          data: {
+            rumahId: house.id,
+            noKkEncrypted,
+            noKkBlindIndex,
+            noKkMasked,
+            statusDomisili: statusHunian === 'DIHUNI_PENYEWA' ? 'KONTRAK' : 'TETAP',
+            statusVerifikasi: 'VERIFIED',
+          },
+        });
+      }
+
+      return reply.send({
+        success: true,
+        data: { house, kk: createdKk },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * PUT /api/v1/kependudukan/rumah/:id (Update house block details)
+   */
+  fastify.put(
+    '/rumah/:id',
+    { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const { kodeBlok, nomorRumah, alamat, statusHunian } = (request.body as any) || {};
+
+      const existing = await prisma.rumahKavling.findUnique({ where: { id } });
+      if (!existing) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Rumah/Kavling tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const updated = await prisma.rumahKavling.update({
+        where: { id },
+        data: {
+          kodeBlok: kodeBlok || existing.kodeBlok,
+          nomorRumah: nomorRumah || existing.nomorRumah,
+          alamat: alamat || existing.alamat,
+          statusHunian: statusHunian || existing.statusHunian,
+        },
+      });
+
+      return reply.send({
+        success: true,
+        data: updated,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * DELETE /api/v1/kependudukan/rumah/:id (Delete house block)
+   */
+  fastify.delete(
+    '/rumah/:id',
+    { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const existing = await prisma.rumahKavling.findUnique({
+        where: { id },
+        include: {
+          kartuKeluarga: {
+            include: { warga: true },
+          },
+        },
+      });
+
+      if (!existing) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Rumah/Kavling tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const totalResidents = existing.kartuKeluarga.reduce((acc, kk) => acc + kk.warga.length, 0);
+      if (totalResidents > 0) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_VALIDATION,
+            message: `Rumah ${existing.kodeBlok} masih memiliki ${totalResidents} warga terdaftar. Pindahkan atau hapus warga terlebih dahulu.`,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      await prisma.rumahKavling.delete({ where: { id } });
+
+      return reply.send({
+        success: true,
+        message: `Rumah/Kavling ${existing.kodeBlok} berhasil dihapus.`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * POST /api/v1/kependudukan/kk (Add Kartu Keluarga to house)
+   */
+  fastify.post(
+    '/kk',
+    { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { rumahId, nomorKk, statusDomisili = 'TETAP' } = (request.body as any) || {};
+
+      if (!rumahId || !nomorKk || nomorKk.trim().length !== 16) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'rumahId dan nomor KK 16 digit wajib diisi.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const house = await prisma.rumahKavling.findUnique({ where: { id: rumahId } });
+      if (!house) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Rumah/kavling tujuan tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const cleanKk = nomorKk.trim();
+      const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(cleanKk);
+      const existingKk = await prisma.kartuKeluarga.findUnique({ where: { noKkBlindIndex } });
+      if (existingKk) {
+        return reply.status(409).send({
+          success: false,
+          error: { code: ErrorCode.ERR_CONFLICT, message: 'Nomor Kartu Keluarga sudah terdaftar.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const created = await prisma.kartuKeluarga.create({
+        data: {
+          rumahId,
+          noKkEncrypted: cryptoAdapter.encryptField(cleanKk),
+          noKkBlindIndex,
+          noKkMasked: blindIndexAdapter.maskNik(cleanKk),
+          statusDomisili,
+          statusVerifikasi: 'VERIFIED',
+        },
+      });
+
+      return reply.send({
+        success: true,
+        data: created,
         timestamp: new Date().toISOString(),
       });
     }

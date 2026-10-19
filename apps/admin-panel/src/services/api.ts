@@ -77,6 +77,19 @@ class ApiClient {
       body: body instanceof FormData ? body : JSON.stringify(body),
     });
   }
+
+  public put<T>(endpoint: string, body?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    });
+  }
+
+  public delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient();
