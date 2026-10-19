@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: simrt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-simrt_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simrt_super_secret_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-simrt_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-simrt_admin} -d ${POSTGRES_DB:-simrt_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2024-05-10T01-41-38Z
+    container_name: simrt-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-simrt_minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-simrt_minio_super_secret_2026}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-05-09T17-04-24Z
+    container_name: simrt-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-simrt_minio_admin} ${MINIO_ROOT_PASSWORD:-simrt_minio_super_secret_2026};
+      /usr/bin/mc mb --ignore-existing local/dokumen-warga;
+      /usr/bin/mc mb --ignore-existing local/kas-nota;
+      /usr/bin/mc mb --ignore-existing local/surat-arsip;
+      /usr/bin/mc anonymous set none local/dokumen-warga;
+      /usr/bin/mc anonymous set none local/kas-nota;
+      /usr/bin/mc anonymous set none local/surat-arsip;
+      echo 'MinIO private buckets initialized successfully.';
+      exit 0;
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+

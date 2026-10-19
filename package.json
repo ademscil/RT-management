@@ -1,0 +1,31 @@
+{
+  "name": "sim-rt-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.14.0",
+  "description": "Sistem Informasi Manajemen RT (SIM-RT) Enterprise Monorepo - Zero-MDN, Defense-in-Depth, Clean Architecture",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "db:generate": "pnpm --filter backend-api db:generate",
+    "db:push": "pnpm --filter backend-api db:push",
+    "db:migrate": "pnpm --filter backend-api db:migrate",
+    "db:seed": "pnpm --filter backend-api db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  }
+}
+

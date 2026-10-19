@@ -1,0 +1,56 @@
+# Caddyfile: Production Reverse Proxy for SIM-RT Enterprise Monorepo
+# Automatic TLS, HTTP/2, SSE Unbuffered Streaming & CSP Hardening
+
+{
+    admin off
+    auto_https off
+}
+
+:80 {
+    encode zstd gzip
+
+    # DEFENSE-IN-DEPTH SECURITY HEADERS (OWASP & CSP Hardening)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none';"
+        -Server
+    }
+
+    # API Backend Reverse Proxy
+    handle /api/* {
+        reverse_proxy backend-api:3001 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Real-Time SSE Notification Stream (Buffer-disabled for 0-latency SSE)
+    handle /api/v1/notifications/stream {
+        reverse_proxy backend-api:3001 {
+            flush_interval -1
+            header_up Connection ""
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+        }
+    }
+
+    # Admin Panel (Desktop ERP & Command Center)
+    handle_path /admin* {
+        root * /srv/admin-panel
+        try_files {path} /index.html
+        file_server
+    }
+
+    # Resident Super-App (Mobile Web & Progressive App)
+    handle {
+        root * /srv/resident-mobile
+        try_files {path} /index.html
+        file_server
+    }
+}

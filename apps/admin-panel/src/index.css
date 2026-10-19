@@ -1,0 +1,7 @@
+@import '@simrt/ui-kit/styles.css';
+
+@layer base {
+  body {
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+}

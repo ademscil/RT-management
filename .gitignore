@@ -1,0 +1,39 @@
+# Node & Dependencies
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+
+# Turborepo
+.turbo/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Prisma
+dev.db
+dev.db-journal
+
+# Capacitor / Mobile Builds
+android/app/build/
+android/.gradle/
+*.apk
+*.aab
+
+# Backups & Local Data
+backups/
+docker/**/data/
+docker/**/pgdata/
+
+

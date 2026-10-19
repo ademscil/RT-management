@@ -1,0 +1,38 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+    '../../packages/ui-kit/src/**/*.{js,ts,jsx,tsx}',
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0F766E', // Civic Emerald/Teal
+          800: '#115e59',
+          900: '#134e4a',
+        },
+        secondary: {
+          700: '#334155', // Slate Indigo
+        },
+        pii: {
+          700: '#6D28D9', // PII Vault Accent
+        },
+      },
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+    },
+  },
+  plugins: [],
+};
