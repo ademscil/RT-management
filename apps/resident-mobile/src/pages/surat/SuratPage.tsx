@@ -9,7 +9,7 @@ import {
   Send,
   X,
 } from 'lucide-react';
-import { mobileApi } from '../../services/api.js';
+import { mobileApi, API_ORIGIN } from '../../services/api.js';
 import { Card, CardContent, Button, Badge, notify } from '@simrt/ui-kit';
 
 interface SuratItem {
@@ -244,7 +244,7 @@ export const SuratPage: React.FC = () => {
                   {isCompleted && surat.verificationHash && (
                     <div className="pt-1 flex gap-2">
                       <a
-                        href={`/api/v1/surat/verify/${surat.verificationHash}`}
+                        href={`${API_ORIGIN}/api/v1/surat/verify/${surat.verificationHash}`}
                         target="_blank"
                         rel="noreferrer"
                         className="flex-1 py-2 px-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-sm"
@@ -252,7 +252,7 @@ export const SuratPage: React.FC = () => {
                         <Download className="w-3.5 h-3.5" /> Unduh PDF Resmi
                       </a>
                       <a
-                        href={`/api/v1/surat/verify/${surat.verificationHash}`}
+                        href={`${API_ORIGIN}/api/v1/surat/verify/${surat.verificationHash}`}
                         target="_blank"
                         rel="noreferrer"
                         className="py-2 px-3 rounded-xl bg-teal-50 text-teal-800 text-xs font-bold flex items-center gap-1 border border-teal-200"

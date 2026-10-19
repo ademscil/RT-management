@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'id.simrt.warga',
   appName: 'SIM-RT Warga',
   webDir: 'dist',
-  bundledWebRuntime: false,
   plugins: {
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',

@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import multipart from '@fastify/multipart';
 import { SSEBrokerService } from '../infrastructure/realtime/sse-broker.service.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { kependudukanRoutes } from './routes/kependudukan.routes.js';
@@ -42,6 +43,13 @@ export function createServer(): FastifyInstance {
   // 3. JWT configuration
   app.register(jwt, {
     secret: process.env.JWT_ACCESS_SECRET || 'simrt_jwt_access_secret_super_secure_key_2026_xyz',
+  });
+
+  // 3.1 Multipart/Form-Data support for document & receipt uploads
+  app.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
   });
 
   // 4. Rate Limiting (Brute-force protection)

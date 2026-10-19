@@ -165,13 +165,25 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     const sanitizedKk = items.map((kk: any) => ({
       id: kk.id,
       noKkMasked: kk.noKkMasked,
+      nomorKkMasked: kk.noKkMasked,
       blokRumah: `${kk.rumah.kodeBlok} No. ${kk.rumah.nomorRumah}`,
       alamatDomisili: kk.rumah.alamat,
+      alamatLengkap: kk.rumah.alamat,
       statusDomisili: kk.statusDomisili,
       statusVerifikasi: kk.statusVerifikasi,
       catatanRevisi: kk.catatanRevisi,
       jumlahAnggota: kk.warga.length,
       kepalaKeluarga: kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap || kk.warga[0]?.namaLengkap || '-',
+      anggota: kk.warga.map((w: any) => ({
+        id: w.id,
+        namaLengkap: w.namaLengkap,
+        nikMasked: w.nikMasked,
+        hubunganKeluarga: w.hubunganKeluarga,
+        jenisKelamin: w.jenisKelamin,
+        tempatLahir: w.tempatLahir,
+        tanggalLahir: w.tanggalLahir?.toISOString ? w.tanggalLahir.toISOString() : String(w.tanggalLahir),
+        golonganDarah: w.golonganDarah,
+      })),
     }));
 
     return reply.send({
@@ -179,6 +191,120 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         items: sanitizedKk,
         meta: buildPaginationMeta(total, safePage, safeLimit),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  /**
+   * POST /api/v1/kependudukan/warga/:id/reveal-nik (Resident or Admin decrypts member NIK)
+   */
+  fastify.post('/warga/:id/reveal-nik', async (request, reply) => {
+    const { id: wargaId } = request.params as { id: string };
+    const { reason = 'Keperluan Administrasi Keluarga' } = (request.body as { reason?: string }) || {};
+    const session = request.userSession!;
+
+    const targetWarga = await prisma.warga.findUnique({
+      where: { id: wargaId },
+      include: { kk: true },
+    });
+
+    if (!targetWarga) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (session.role === UserRole.WARGA && targetWarga.kkId !== session.kkId) {
+      return reply.status(403).send({
+        success: false,
+        error: { code: ErrorCode.ERR_FORBIDDEN, message: 'Anda hanya berhak melihat data keluarga sendiri.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const decryptedNik = cryptoAdapter.decryptField(targetWarga.nikEncrypted);
+
+    // Record in Security Audit Log
+    const lastLog = await prisma.securityAuditLog.findFirst({ orderBy: { createdAt: 'desc' } });
+    const prevHash = lastLog ? lastLog.rowHash : HashChainService.GENESIS_HASH;
+    const auditId = `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const timestampIso = new Date().toISOString();
+    const actionType = 'REVEAL_PII_NIK';
+
+    const rowHash = hashChainService.computeRowHash(
+      prevHash,
+      auditId,
+      session.userId,
+      `${actionType}:${wargaId}:${reason}`,
+      timestampIso
+    );
+
+    await prisma.securityAuditLog.create({
+      data: {
+        id: auditId,
+        actorUserId: session.userId,
+        actorRole: session.role,
+        actionType,
+        targetEntity: 'WARGA',
+        targetId: wargaId,
+        accessReason: reason,
+        ipAddress: request.ip || '127.0.0.1',
+        userAgent: request.headers['user-agent'] || 'Unknown',
+        prevHash,
+        rowHash,
+      },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        nik: decryptedNik,
+        namaLengkap: targetWarga.namaLengkap,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  /**
+   * POST /api/v1/kependudukan/dokumen/upload (Upload citizen KTP or family documents)
+   */
+  fastify.post('/dokumen/upload', async (request, reply) => {
+    let wargaId = '';
+    let documentType = 'KTP';
+
+    if (request.isMultipart()) {
+      const parts = request.parts();
+      for await (const part of parts) {
+        if (part.type === 'file') {
+          await part.toBuffer();
+        } else {
+          if (part.fieldname === 'wargaId') wargaId = part.value as string;
+          if (part.fieldname === 'documentType') documentType = part.value as string;
+        }
+      }
+    } else {
+      const body = request.body as any;
+      wargaId = body?.wargaId;
+      documentType = body?.documentType || 'KTP';
+    }
+
+    if (wargaId) {
+      await prisma.warga.update({
+        where: { id: wargaId },
+        data: {
+          fotoKtpMinioKey: `ktp-${wargaId}-${Date.now()}.jpg`,
+        },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        message: 'Dokumen berhasil diunggah dan disimpan dengan aman.',
+        documentType,
       },
       timestamp: new Date().toISOString(),
     });

@@ -142,7 +142,11 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       blokRumah: `${t.rumah.kodeBlok} No. ${t.rumah.nomorRumah}`,
       alamat: t.rumah.alamat,
       bulan: t.bulan,
+      periodeBulan: t.bulan,
       tahun: t.tahun,
+      periodeTahun: t.tahun,
+      jatuhTempo: new Date(t.tahun, t.bulan - 1, 10).toISOString(),
+      keterangan: `Iuran Kas RT Periode ${t.bulan}/${t.tahun}`,
       nominal: Number(t.nominal),
       status: t.status,
       buktiBayarMinioKey: t.buktiBayarMinioKey,
@@ -157,6 +161,80 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         items: formatted,
         meta: buildPaginationMeta(total, page, limit),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  /**
+   * POST /api/v1/keuangan/pembayaran/upload-bukti (Resident uploads payment receipt)
+   */
+  fastify.post('/pembayaran/upload-bukti', async (request, reply) => {
+    let tagihanId = '';
+
+    if (request.isMultipart()) {
+      const parts = request.parts();
+      for await (const part of parts) {
+        if (part.type === 'file') {
+          await part.toBuffer();
+        } else {
+          if (part.fieldname === 'tagihanId') {
+            tagihanId = part.value as string;
+          }
+        }
+      }
+    } else {
+      const body = request.body as any;
+      tagihanId = body?.tagihanId;
+    }
+
+    if (!tagihanId) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: ErrorCode.ERR_VALIDATION, message: 'tagihanId wajib disertakan.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const tagihan = await prisma.tagihanIuran.findUnique({
+      where: { id: tagihanId },
+      include: { kk: { include: { warga: true } }, rumah: true },
+    });
+
+    if (!tagihan) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Tagihan tidak ditemukan.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const key = `bukti-${tagihanId}-${Date.now()}.jpg`;
+    await prisma.tagihanIuran.update({
+      where: { id: tagihanId },
+      data: {
+        status: StatusTagihanIuran.PENDING_VERIFICATION,
+        buktiBayarMinioKey: key,
+      },
+    });
+
+    // Notify Treasurer & RT Chairman
+    sseBroker.emitToRole('PENGURUS', 'notification', {
+      id: `BUKTI-${Date.now()}`,
+      title: 'Bukti Pembayaran Iuran Masuk',
+      message: `Warga ${tagihan.rumah.kodeBlok} No. ${tagihan.rumah.nomorRumah} telah mengunggah bukti bayar iuran periode ${tagihan.bulan}/${tagihan.tahun}.`,
+      category: NotificationCategory.IURAN,
+      priority: NotificationPriority.NORMAL,
+      deepLink: '/iuran',
+      createdAt: new Date().toISOString(),
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        tagihanId,
+        status: StatusTagihanIuran.PENDING_VERIFICATION,
+        message: 'Bukti transfer berhasil diunggah. Menunggu verifikasi Bendahara RT.',
       },
       timestamp: new Date().toISOString(),
     });
@@ -376,9 +454,9 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   /**
-   * GET /api/v1/keuangan/ledger (Immutable Cash Ledger with Pagination & Filters)
+   * GET /api/v1/keuangan/ledger & GET /api/v1/keuangan/kas (Immutable Cash Ledger with Pagination & Filters)
    */
-  fastify.get('/ledger', async (request, reply) => {
+  const handleGetLedger = async (request: any, reply: any) => {
     const parseResult = KasLedgerQueryFilterSchema.safeParse(request.query);
     if (!parseResult.success) {
       return reply.status(400).send({
@@ -410,13 +488,17 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
     const formatted = items.map((k) => ({
       id: k.id,
       namaPos: k.posKeuangan.namaPos,
+      posKasNama: k.posKeuangan.namaPos,
       tipe: k.tipe,
+      jenisTransaksi: k.tipe,
       nominal: Number(k.nominal),
       saldoSetelah: Number(k.saldoSetelah),
       deskripsi: k.deskripsi,
+      keterangan: k.deskripsi,
       prevHash: k.prevHash,
       rowHash: k.rowHash,
       createdAt: k.createdAt.toISOString(),
+      tanggalTransaksi: k.createdAt.toISOString(),
     }));
 
     return reply.send({
@@ -427,7 +509,10 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       },
       timestamp: new Date().toISOString(),
     });
-  });
+  };
+
+  fastify.get('/ledger', handleGetLedger);
+  fastify.get('/kas', handleGetLedger);
 
   /**
    * POST /api/v1/keuangan/catat-pengeluaran (Record Cash Expense with Hash Chaining)

@@ -41,7 +41,9 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       data: templates.map((t) => ({
         id: t.id,
         kodeSurat: t.kodeSurat,
+        kode: t.kodeSurat,
         namaSurat: t.namaSurat,
+        nama: t.namaSurat,
         formatNomor: t.formatNomor,
         syaratDokumen: JSON.parse(t.syaratDokumen || '[]'),
       })),
@@ -137,7 +139,10 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/v1/surat/ajukan (Resident submits letter application)
    */
-  fastify.post('/ajukan', { preHandler: [authenticateJwt] }, async (request, reply) => {
+  /**
+   * POST /api/v1/surat/ajukan and /pengajuan (Resident submits letter application)
+   */
+  const handleAjukanSurat = async (request: any, reply: any) => {
     const parseResult = AjukanSuratSchema.safeParse(request.body);
     if (!parseResult.success) {
       return reply.status(400).send({
@@ -147,10 +152,12 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const { jenisSuratId, keperluan } = parseResult.data;
+    const { jenisSuratId, keperluan, keteranganTambahan } = parseResult.data;
     const session = request.userSession!;
 
     const nomorTiket = `TKT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const fullKeperluan = keteranganTambahan ? `${keperluan} (${keteranganTambahan})` : keperluan;
 
     const newSurat = await prisma.pengajuanSurat.create({
       data: {
@@ -158,7 +165,7 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
         pemohonWargaId: session.wargaId,
         kkId: session.kkId,
         jenisSuratId,
-        keperluan,
+        keperluan: fullKeperluan,
         status: StatusPengajuanSurat.SUBMITTED,
       },
       include: { pemohonWarga: true, jenisSurat: true },
@@ -184,7 +191,10 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       },
       timestamp: new Date().toISOString(),
     });
-  });
+  };
+
+  fastify.post('/ajukan', { preHandler: [authenticateJwt] }, handleAjukanSurat);
+  fastify.post('/pengajuan', { preHandler: [authenticateJwt] }, handleAjukanSurat);
 
   /**
    * POST /api/v1/surat/verifikasi (Secretary reviews & marks verified or rejected)

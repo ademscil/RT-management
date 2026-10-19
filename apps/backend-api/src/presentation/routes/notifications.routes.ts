@@ -134,9 +134,12 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
           items: items.map((n) => ({
             id: n.id,
             kategori: n.kategori,
+            type: n.kategori,
             priority: n.priority,
             judul: n.judul,
+            title: n.judul,
             pesan: n.pesan,
+            message: n.pesan,
             actionLabel: n.actionLabel,
             deepLinkUrl: n.deepLinkUrl,
             isRead: n.isRead,
@@ -168,8 +171,22 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     /**
-     * POST /api/v1/notifications/mark-read
+     * POST /api/v1/notifications/mark-read & POST /api/v1/notifications/mark-all-read
      */
+    authenticatedFastify.post('/mark-all-read', async (request, reply) => {
+      const session = request.userSession!;
+      await prisma.inAppNotification.updateMany({
+        where: { userId: session.userId, isRead: false },
+        data: { isRead: true, readAt: new Date() },
+      });
+
+      return reply.send({
+        success: true,
+        data: { message: 'Semua notifikasi berhasil ditandai telah dibaca.' },
+        timestamp: new Date().toISOString(),
+      });
+    });
+
     authenticatedFastify.post('/mark-read', async (request, reply) => {
       const { notificationId, all } = (request.body as { notificationId?: string; all?: boolean }) || {};
       const session = request.userSession!;

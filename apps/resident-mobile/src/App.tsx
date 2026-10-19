@@ -27,7 +27,7 @@ const MainLayout: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState<number>(2);
 
   // SSE Real-Time listener for resident notifications
-  const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
+  const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
   useSSE({
     url: `${apiUrl}/api/v1/notifications/stream`,
     token: isAuthenticated ? token : null,
