@@ -1,8 +1,10 @@
 import type { ApiResponse } from '@simrt/shared-types';
 
+const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || '';
+
 class ApiClient {
   private token: string | null = null;
-  private readonly baseUrl = '/api/v1';
+  private readonly baseUrl = `${API_ORIGIN}/api/v1`;
 
   constructor() {
     this.token = localStorage.getItem('simrt_token');

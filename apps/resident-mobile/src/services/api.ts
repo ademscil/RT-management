@@ -1,7 +1,9 @@
 import type { ApiResponse } from '@simrt/shared-types';
 
+const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || '';
+
 class MobileApiClient {
-  private baseUrl: string = '/api/v1';
+  private baseUrl: string = `${API_ORIGIN}/api/v1`;
   private token: string | null = null;
 
   constructor() {

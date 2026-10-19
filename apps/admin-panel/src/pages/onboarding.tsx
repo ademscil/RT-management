@@ -63,7 +63,8 @@ export const OnboardingPage: React.FC = () => {
     setIsDownloading(true);
     try {
       const token = api.getToken();
-      const response = await fetch('/api/v1/onboarding/generate-cards', {
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/v1/onboarding/generate-cards`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

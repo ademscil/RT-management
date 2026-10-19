@@ -7,8 +7,9 @@ export const Header: React.FC = () => {
   const { token, user } = useAuth();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
 
+  const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
   const { isConnected, unreadCount, clearUnreadCount } = useSSE({
-    url: '/api/v1/notifications/stream',
+    url: `${apiUrl}/api/v1/notifications/stream`,
     token,
   });
 
