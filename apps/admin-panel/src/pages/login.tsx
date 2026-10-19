@@ -60,13 +60,18 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Username:</label>
+              <label htmlFor="admin-login-username" className="text-xs font-semibold text-slate-300">
+                Username:
+              </label>
               <div className="relative">
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                   <User className="w-4 h-4" />
                 </div>
                 <input
+                  id="admin-login-username"
+                  name="username"
                   type="text"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username"
@@ -76,13 +81,18 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Password:</label>
+              <label htmlFor="admin-login-password" className="text-xs font-semibold text-slate-300">
+                Password:
+              </label>
               <div className="relative">
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
+                  id="admin-login-password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Masukkan password"

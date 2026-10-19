@@ -87,11 +87,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Username Warga:</label>
+              <label htmlFor="warga-login-username" className="text-xs font-semibold text-slate-300">Username Warga:</label>
               <div className="relative">
                 <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
+                  id="warga-login-username"
+                  name="username"
                   type="text"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Contoh: warga_test"
@@ -103,7 +106,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
             {!isRecoveryMode ? (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300">Password:</label>
+                  <label htmlFor="warga-login-password" className="text-xs font-semibold text-slate-300">Password:</label>
                   <button
                     type="button"
                     onClick={() => setIsRecoveryMode(true)}
@@ -115,7 +118,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
+                    id="warga-login-password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Masukkan password Anda"
@@ -126,7 +132,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
             ) : (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300">8-Digit Kode Pemulihan:</label>
+                  <label htmlFor="warga-recovery-code" className="text-xs font-semibold text-slate-300">8-Digit Kode Pemulihan:</label>
                   <button
                     type="button"
                     onClick={() => setIsRecoveryMode(false)}
@@ -138,7 +144,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
+                    id="warga-recovery-code"
+                    name="recoveryCode"
                     type="text"
+                    autoComplete="one-time-code"
                     value={recoveryCode}
                     onChange={(e) => setRecoveryCode(e.target.value)}
                     placeholder="Contoh: 4F92A1B8"

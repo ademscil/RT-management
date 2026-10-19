@@ -3,6 +3,9 @@ import { Search, X, Loader2 } from 'lucide-react';
 import { cn } from '../utils.js';
 
 export interface SearchInputProps {
+  id?: string;
+  name?: string;
+  ariaLabel?: string;
   value?: string;
   onChange: (debouncedValue: string) => void;
   placeholder?: string;
@@ -14,6 +17,9 @@ export interface SearchInputProps {
 }
 
 export const SearchInput: React.FC<SearchInputProps> = ({
+  id = 'search-input',
+  name = 'search',
+  ariaLabel,
   value: initialValue = '',
   onChange,
   placeholder = 'Cari data...',
@@ -80,7 +86,12 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
       <input
         ref={inputRef}
-        type="text"
+        id={id}
+        name={name}
+        type="search"
+        role="searchbox"
+        aria-label={ariaLabel || placeholder || 'Pencarian data'}
+        autoComplete="off"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         placeholder={placeholder}
@@ -95,6 +106,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
             onClick={handleClear}
             className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Hapus pencarian"
+            aria-label="Hapus pencarian"
           >
             <X className="w-3.5 h-3.5" />
           </button>

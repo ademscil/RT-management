@@ -290,10 +290,12 @@ export const SuratPage: React.FC = () => {
 
             <form onSubmit={handleSubmitRequest} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label htmlFor="warga-surat-jenis" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Pilih Jenis Surat:
                 </label>
                 <select
+                  id="warga-surat-jenis"
+                  name="jenisSuratId"
                   value={selectedJenisId}
                   onChange={(e) => setSelectedJenisId(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none"
@@ -307,10 +309,12 @@ export const SuratPage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label htmlFor="warga-surat-keperluan" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Keperluan Permohonan:
                 </label>
                 <input
+                  id="warga-surat-keperluan"
+                  name="keperluan"
                   type="text"
                   value={keperluan}
                   onChange={(e) => setKeperluan(e.target.value)}
@@ -321,10 +325,12 @@ export const SuratPage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label htmlFor="warga-surat-keterangan" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Keterangan Tambahan (Opsional):
                 </label>
                 <textarea
+                  id="warga-surat-keterangan"
+                  name="keteranganTambahan"
                   value={keteranganTambahan}
                   onChange={(e) => setKeteranganTambahan(e.target.value)}
                   placeholder="Catatan pelengkap bagi Sekretaris / Ketua RT..."

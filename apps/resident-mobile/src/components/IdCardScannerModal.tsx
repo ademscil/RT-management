@@ -186,6 +186,9 @@ export const IdCardScannerModal: React.FC<IdCardScannerModalProps> = ({
         {/* Bottom Controls */}
         <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3">
           <input
+            id="ktp-gallery-file-input"
+            name="ktpFile"
+            aria-label="Pilih Foto Dokumen KTP dari Galeri"
             type="file"
             ref={fileInputRef}
             accept="image/jpeg,image/png,image/webp"

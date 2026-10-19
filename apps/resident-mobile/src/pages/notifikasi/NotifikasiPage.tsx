@@ -250,16 +250,19 @@ export const NotifikasiPage: React.FC = () => {
 
           <div className="space-y-2.5 text-xs">
             <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
-              <div>
+              <label htmlFor="toggle-ronda-alarm" className="cursor-pointer">
                 <strong className="text-slate-800 dark:text-slate-200 block">
                   Alarm Ronda Malam (H-30 Menit)
                 </strong>
                 <span className="text-[11px] text-slate-500">
                   Jadwal alarm internal perangkat tanpa pulsa / SMS
                 </span>
-              </div>
+              </label>
               <input
+                id="toggle-ronda-alarm"
+                name="rondaAlarmEnabled"
                 type="checkbox"
+                aria-label="Aktifkan Alarm Ronda Malam"
                 checked={rondaAlarmEnabled}
                 onChange={handleToggleRonda}
                 className="w-4 h-4 accent-teal-600 rounded cursor-pointer"
@@ -267,16 +270,19 @@ export const NotifikasiPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
-              <div>
+              <label htmlFor="toggle-iuran-reminder" className="cursor-pointer">
                 <strong className="text-slate-800 dark:text-slate-200 block">
                   Pengingat Iuran Bulanan (H-2)
                 </strong>
                 <span className="text-[11px] text-slate-500">
                   Notifikasi lokal sebelum jatuh tempo tagihan kas
                 </span>
-              </div>
+              </label>
               <input
+                id="toggle-iuran-reminder"
+                name="iuranReminderEnabled"
                 type="checkbox"
+                aria-label="Aktifkan Pengingat Iuran Bulanan"
                 checked={iuranReminderEnabled}
                 onChange={handleToggleIuran}
                 className="w-4 h-4 accent-teal-600 rounded cursor-pointer"

@@ -185,7 +185,11 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
 
             <div className="space-y-3">
               <input
+                id="warga-activation-token"
+                name="activationToken"
                 type="text"
+                autoComplete="one-time-code"
+                aria-label="Token Aktivasi Warga 24 Digit"
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
                 placeholder="24 digit token aktivasi..."
@@ -228,11 +232,14 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Password Baru:</label>
+              <label htmlFor="warga-new-password" className="text-xs font-semibold text-slate-300">Password Baru:</label>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
+                  id="warga-new-password"
+                  name="newPassword"
                   type="password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimal 8 karakter"
@@ -242,11 +249,14 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Konfirmasi Password:</label>
+              <label htmlFor="warga-confirm-password" className="text-xs font-semibold text-slate-300">Konfirmasi Password:</label>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
+                  id="warga-confirm-password"
+                  name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ulangi password"
@@ -300,8 +310,10 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
               <Copy className="w-4 h-4" /> {copiedCodes ? 'Kode Telah Disalin!' : 'Salin Semua Kode'}
             </Button>
 
-            <label className="flex items-start gap-2.5 p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/60 cursor-pointer">
+            <label htmlFor="activation-confirm-save-code" className="flex items-start gap-2.5 p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/60 cursor-pointer">
               <input
+                id="activation-confirm-save-code"
+                name="confirmSaveCode"
                 type="checkbox"
                 checked={hasConfirmedSave}
                 onChange={(e) => setHasConfirmedSave(e.target.checked)}

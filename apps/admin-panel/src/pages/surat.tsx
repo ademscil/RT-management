@@ -605,8 +605,10 @@ export const SuratPage: React.FC = () => {
 
             <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Pilih Warga Pemohon:</label>
+                <label htmlFor="walkin-warga-select" className="font-semibold text-slate-700 dark:text-slate-300">Pilih Warga Pemohon:</label>
                 <select
+                  id="walkin-warga-select"
+                  name="wargaId"
                   value={selectedWargaId}
                   onChange={(e) => setSelectedWargaId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
@@ -620,8 +622,10 @@ export const SuratPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Jenis Surat Pengantar:</label>
+                <label htmlFor="walkin-template-select" className="font-semibold text-slate-700 dark:text-slate-300">Jenis Surat Pengantar:</label>
                 <select
+                  id="walkin-template-select"
+                  name="templateId"
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
@@ -635,8 +639,10 @@ export const SuratPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Keperluan Surat:</label>
+                <label htmlFor="walkin-keperluan-textarea" className="font-semibold text-slate-700 dark:text-slate-300">Keperluan Surat:</label>
                 <textarea
+                  id="walkin-keperluan-textarea"
+                  name="keperluan"
                   rows={3}
                   value={walkinKeperluan}
                   onChange={(e) => setWalkinKeperluan(e.target.value)}

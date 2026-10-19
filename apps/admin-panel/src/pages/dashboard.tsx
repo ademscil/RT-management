@@ -295,7 +295,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
               <div className="relative w-full sm:max-w-xs">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="text"
+                  id="dashboard-search-house"
+                  name="houseSearch"
+                  type="search"
+                  role="searchbox"
+                  aria-label="Cari nomor rumah atau nama kepala keluarga"
+                  autoComplete="off"
                   value={houseSearch}
                   onChange={(e) => setHouseSearch(e.target.value)}
                   placeholder="Cari no. rumah / nama kepala keluarga..."

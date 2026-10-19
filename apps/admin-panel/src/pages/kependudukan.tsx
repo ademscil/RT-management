@@ -271,6 +271,9 @@ export const KependudukanPage: React.FC = () => {
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <select
+              id="filter-golongan-darah"
+              name="golDarahFilter"
+              aria-label="Filter Golongan Darah"
               value={golDarahFilter}
               onChange={(e) => {
                 setGolDarahFilter(e.target.value);
@@ -475,10 +478,12 @@ export const KependudukanPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label htmlFor="catatan-verifikasi-berkas" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Catatan Verifikasi / Alasan Perbaikan:
                   </label>
                   <textarea
+                    id="catatan-verifikasi-berkas"
+                    name="catatanVerifikasi"
                     rows={3}
                     placeholder="Masukkan catatan jika ada perbaikan nama, ejaan tanggal lahir, atau foto kurang jelas..."
                     className="w-full p-3 text-xs border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-teal-700"
@@ -536,8 +541,10 @@ export const KependudukanPage: React.FC = () => {
 
             <form onSubmit={handleSaveWarga} className="space-y-3 text-xs">
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Pilih Rumah / Kartu Keluarga:</label>
+                <label htmlFor="warga-baru-kk-id" className="font-semibold text-slate-700 dark:text-slate-300">Pilih Rumah / Kartu Keluarga:</label>
                 <select
+                  id="warga-baru-kk-id"
+                  name="kkId"
                   value={formSelectedKkId}
                   onChange={(e) => setFormSelectedKkId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
@@ -552,8 +559,10 @@ export const KependudukanPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap (Sesuai KTP):</label>
+                  <label htmlFor="warga-baru-nama" className="font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap (Sesuai KTP):</label>
                   <input
+                    id="warga-baru-nama"
+                    name="namaLengkap"
                     type="text"
                     value={formNama}
                     onChange={(e) => setFormNama(e.target.value)}
@@ -564,8 +573,10 @@ export const KependudukanPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">NIK (16 Digit):</label>
+                  <label htmlFor="warga-baru-nik" className="font-semibold text-slate-700 dark:text-slate-300">NIK (16 Digit):</label>
                   <input
+                    id="warga-baru-nik"
+                    name="nik"
                     type="text"
                     value={formNik}
                     onChange={(e) => setFormNik(e.target.value.replace(/\D/g, '').substring(0, 16))}
@@ -578,8 +589,10 @@ export const KependudukanPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Tempat Lahir:</label>
+                  <label htmlFor="warga-baru-tempat-lahir" className="font-semibold text-slate-700 dark:text-slate-300">Tempat Lahir:</label>
                   <input
+                    id="warga-baru-tempat-lahir"
+                    name="tempatLahir"
                     type="text"
                     value={formTempatLahir}
                     onChange={(e) => setFormTempatLahir(e.target.value)}
@@ -587,8 +600,10 @@ export const KependudukanPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Tanggal Lahir:</label>
+                  <label htmlFor="warga-baru-tanggal-lahir" className="font-semibold text-slate-700 dark:text-slate-300">Tanggal Lahir:</label>
                   <input
+                    id="warga-baru-tanggal-lahir"
+                    name="tanggalLahir"
                     type="date"
                     value={formTanggalLahir}
                     onChange={(e) => setFormTanggalLahir(e.target.value)}
@@ -599,8 +614,10 @@ export const KependudukanPage: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Jenis Kelamin:</label>
+                  <label htmlFor="warga-baru-gender" className="font-semibold text-slate-700 dark:text-slate-300">Jenis Kelamin:</label>
                   <select
+                    id="warga-baru-gender"
+                    name="gender"
                     value={formGender}
                     onChange={(e) => setFormGender(e.target.value)}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
@@ -610,8 +627,10 @@ export const KependudukanPage: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Gol. Darah:</label>
+                  <label htmlFor="warga-baru-gol-darah" className="font-semibold text-slate-700 dark:text-slate-300">Gol. Darah:</label>
                   <select
+                    id="warga-baru-gol-darah"
+                    name="golDarah"
                     value={formGolDarah}
                     onChange={(e) => setFormGolDarah(e.target.value)}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-mono"
@@ -623,8 +642,10 @@ export const KependudukanPage: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Hubungan:</label>
+                  <label htmlFor="warga-baru-hubungan" className="font-semibold text-slate-700 dark:text-slate-300">Hubungan:</label>
                   <select
+                    id="warga-baru-hubungan"
+                    name="hubungan"
                     value={formHubungan}
                     onChange={(e) => setFormHubungan(e.target.value)}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
@@ -639,8 +660,10 @@ export const KependudukanPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Pekerjaan:</label>
+                  <label htmlFor="warga-baru-pekerjaan" className="font-semibold text-slate-700 dark:text-slate-300">Pekerjaan:</label>
                   <input
+                    id="warga-baru-pekerjaan"
+                    name="pekerjaan"
                     type="text"
                     value={formPekerjaan}
                     onChange={(e) => setFormPekerjaan(e.target.value)}
@@ -648,8 +671,10 @@ export const KependudukanPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Agama:</label>
+                  <label htmlFor="warga-baru-agama" className="font-semibold text-slate-700 dark:text-slate-300">Agama:</label>
                   <select
+                    id="warga-baru-agama"
+                    name="agama"
                     value={formAgama}
                     onChange={(e) => setFormAgama(e.target.value)}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
@@ -663,8 +688,10 @@ export const KependudukanPage: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">Status Kawin:</label>
+                  <label htmlFor="warga-baru-status-kawin" className="font-semibold text-slate-700 dark:text-slate-300">Status Kawin:</label>
                   <select
+                    id="warga-baru-status-kawin"
+                    name="statusKawin"
                     value={formStatusKawin}
                     onChange={(e) => setFormStatusKawin(e.target.value)}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
@@ -678,8 +705,10 @@ export const KependudukanPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Status Kependudukan:</label>
+                <label htmlFor="warga-baru-status-kependudukan" className="font-semibold text-slate-700 dark:text-slate-300">Status Kependudukan:</label>
                 <select
+                  id="warga-baru-status-kependudukan"
+                  name="statusKependudukan"
                   value={formStatusKependudukan}
                   onChange={(e) => setFormStatusKependudukan(e.target.value)}
                   className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
@@ -692,8 +721,10 @@ export const KependudukanPage: React.FC = () => {
 
               {/* Vulnerability Checkbox */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4">
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label htmlFor="warga-baru-is-lansia" className="flex items-center gap-1.5 cursor-pointer">
                   <input
+                    id="warga-baru-is-lansia"
+                    name="isLansia"
                     type="checkbox"
                     checked={formIsLansia}
                     onChange={(e) => setFormIsLansia(e.target.checked)}
@@ -701,8 +732,10 @@ export const KependudukanPage: React.FC = () => {
                   />
                   <span>Lansia (60+ thn)</span>
                 </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label htmlFor="warga-baru-is-disabilitas" className="flex items-center gap-1.5 cursor-pointer">
                   <input
+                    id="warga-baru-is-disabilitas"
+                    name="isDisabilitas"
                     type="checkbox"
                     checked={formIsDisabilitas}
                     onChange={(e) => setFormIsDisabilitas(e.target.checked)}
@@ -710,8 +743,10 @@ export const KependudukanPage: React.FC = () => {
                   />
                   <span>Disabilitas</span>
                 </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label htmlFor="warga-baru-is-balita" className="flex items-center gap-1.5 cursor-pointer">
                   <input
+                    id="warga-baru-is-balita"
+                    name="isBalita"
                     type="checkbox"
                     checked={formIsBalita}
                     onChange={(e) => setFormIsBalita(e.target.checked)}

@@ -379,7 +379,7 @@ export const IuranPage: React.FC = () => {
               </label>
 
               {!previewUrl ? (
-                <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-teal-500 transition-colors">
+                <label htmlFor="upload-bukti-transfer-input" className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-teal-500 transition-colors">
                   <Camera className="w-8 h-8 text-slate-400 mb-2" />
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                     Foto Bukti Transfer
@@ -388,6 +388,9 @@ export const IuranPage: React.FC = () => {
                     Format JPG, PNG, atau WebP (Maks 5MB)
                   </span>
                   <input
+                    id="upload-bukti-transfer-input"
+                    name="buktiTransfer"
+                    aria-label="Unggah Foto Bukti Transfer"
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}

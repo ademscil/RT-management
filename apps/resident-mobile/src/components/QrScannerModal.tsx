@@ -133,11 +133,14 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
           ) : (
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label htmlFor="manual-token-activation-input" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Token Aktivasi Kartu RT:
                 </label>
                 <input
+                  id="manual-token-activation-input"
+                  name="manualToken"
                   type="text"
+                  autoComplete="one-time-code"
                   value={manualToken}
                   onChange={(e) => setManualToken(e.target.value)}
                   placeholder="Contoh: a1b2c3d4e5f6..."

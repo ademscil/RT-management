@@ -68,6 +68,7 @@ export const PiiRevealModal: React.FC<PiiRevealModalProps> = ({
               {PiiAccessReasonSchema.options.map((reason) => (
                 <label
                   key={reason}
+                  htmlFor={`pii-access-reason-${reason}`}
                   className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
                     selectedReason === reason
                       ? 'border-violet-600 bg-violet-50/50 dark:bg-violet-950/30 text-violet-900 dark:text-violet-200 font-semibold'
@@ -75,8 +76,10 @@ export const PiiRevealModal: React.FC<PiiRevealModalProps> = ({
                   }`}
                 >
                   <input
+                    id={`pii-access-reason-${reason}`}
                     type="radio"
                     name="accessReason"
+                    aria-label={reasonLabels[reason]}
                     value={reason}
                     checked={selectedReason === reason}
                     onChange={() => setSelectedReason(reason)}

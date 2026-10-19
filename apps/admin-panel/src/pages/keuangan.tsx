@@ -624,8 +624,10 @@ export const KeuanganPage: React.FC = () => {
 
             <form onSubmit={handleRecordExpense} className="space-y-3.5 text-xs">
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Pos Pengeluaran:</label>
+                <label htmlFor="expense-pos-select" className="font-semibold text-slate-700 dark:text-slate-300">Pos Pengeluaran:</label>
                 <select
+                  id="expense-pos-select"
+                  name="expensePos"
                   value={expensePos}
                   onChange={(e) => setExpensePos(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
@@ -639,8 +641,10 @@ export const KeuanganPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Nominal Pengeluaran (Rp):</label>
+                <label htmlFor="expense-nominal-input" className="font-semibold text-slate-700 dark:text-slate-300">Nominal Pengeluaran (Rp):</label>
                 <input
+                  id="expense-nominal-input"
+                  name="expenseNominal"
                   type="number"
                   value={expenseNominal}
                   onChange={(e) => setExpenseNominal(Number(e.target.value))}
@@ -650,8 +654,10 @@ export const KeuanganPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Keterangan / Rincian Belanja:</label>
+                <label htmlFor="expense-deskripsi-textarea" className="font-semibold text-slate-700 dark:text-slate-300">Keterangan / Rincian Belanja:</label>
                 <textarea
+                  id="expense-deskripsi-textarea"
+                  name="expenseDeskripsi"
                   rows={3}
                   value={expenseDeskripsi}
                   onChange={(e) => setExpenseDeskripsi(e.target.value)}
@@ -689,53 +695,67 @@ export const KeuanganPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Bulan:</label>
-                  <select
-                    value={batchBulan}
-                    onChange={(e) => setBatchBulan(Number(e.target.value))}
-                    className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1"
-                  >
-                    {monthNames.map((m, i) => (
-                      <option key={m} value={i + 1}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleGenerateBatch();
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label htmlFor="batch-bulan-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Bulan:</label>
+                    <select
+                      id="batch-bulan-select"
+                      name="batchBulan"
+                      value={batchBulan}
+                      onChange={(e) => setBatchBulan(Number(e.target.value))}
+                      className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1"
+                    >
+                      {monthNames.map((m, i) => (
+                        <option key={m} value={i + 1}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="batch-tahun-input" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tahun:</label>
+                    <input
+                      id="batch-tahun-input"
+                      name="batchTahun"
+                      type="number"
+                      value={batchTahun}
+                      onChange={(e) => setBatchTahun(Number(e.target.value))}
+                      className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1 font-mono font-bold"
+                    />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tahun:</label>
+                  <label htmlFor="batch-nominal-input" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nominal Iuran Per Rumah (Rp):</label>
                   <input
+                    id="batch-nominal-input"
+                    name="batchNominal"
                     type="number"
-                    value={batchTahun}
-                    onChange={(e) => setBatchTahun(Number(e.target.value))}
+                    value={batchNominal}
+                    onChange={(e) => setBatchNominal(Number(e.target.value))}
+                    step={5000}
                     className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1 font-mono font-bold"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nominal Iuran Per Rumah (Rp):</label>
-                <input
-                  type="number"
-                  value={batchNominal}
-                  onChange={(e) => setBatchNominal(Number(e.target.value))}
-                  step={5000}
-                  className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1 font-mono font-bold"
-                />
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <Button type="button" variant="outline" size="md" onClick={() => setBatchModalOpen(false)} disabled={isGeneratingBatch}>
+                  Batal
+                </Button>
+                <Button type="submit" variant="primary" size="md" isLoading={isGeneratingBatch}>
+                  Terbitkan Tagihan Iuran
+                </Button>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <Button variant="outline" size="md" onClick={() => setBatchModalOpen(false)} disabled={isGeneratingBatch}>
-                Batal
-              </Button>
-              <Button variant="primary" size="md" onClick={handleGenerateBatch} isLoading={isGeneratingBatch}>
-                Terbitkan Tagihan Sekarang
-              </Button>
-            </div>
+            </form>
           </div>
         </div>
       )}

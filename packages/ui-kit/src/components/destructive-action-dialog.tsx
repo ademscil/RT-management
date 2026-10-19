@@ -52,11 +52,14 @@ export const DestructiveActionDialog: React.FC<DestructiveActionDialogProps> = (
 
         <form onSubmit={handleConfirm} className="space-y-4 pt-1">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label htmlFor="destructive-confirmation-input" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Ketik kata <strong className="font-mono text-red-600">{confirmationKeyword}</strong> untuk menyetujui:
             </label>
             <input
+              id="destructive-confirmation-input"
+              name="confirmationKeyword"
               type="text"
+              autoComplete="off"
               value={typedInput}
               onChange={(e) => setTypedInput(e.target.value)}
               placeholder={`Ketik "${confirmationKeyword}"`}

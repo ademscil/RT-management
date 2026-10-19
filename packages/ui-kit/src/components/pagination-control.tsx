@@ -72,8 +72,13 @@ export const PaginationControl: React.FC<PaginationControlProps> = ({
 
         {onLimitChange && (
           <div className="flex items-center gap-1.5 ml-2">
-            <span className="text-xs text-slate-500 hidden md:inline">Baris:</span>
+            <label htmlFor="pagination-page-size-select" className="text-xs text-slate-500 hidden md:inline">
+              Baris:
+            </label>
             <select
+              id="pagination-page-size-select"
+              name="limit"
+              aria-label="Jumlah baris per halaman"
               value={limit}
               onChange={(e) => onLimitChange(Number(e.target.value))}
               disabled={isLoading}
