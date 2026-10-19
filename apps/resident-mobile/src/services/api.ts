@@ -2,16 +2,36 @@ import type { ApiResponse } from '@simrt/shared-types';
 
 export const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 class MobileApiClient {
   private baseUrl: string = `${API_ORIGIN}/api/v1`;
   private token: string | null = null;
+  private cache = new Map<string, CacheEntry<any>>();
+  private readonly defaultTtl = 30000; // 30 seconds fresh cache
 
   constructor() {
     this.token = localStorage.getItem('simrt_mobile_access_token');
   }
 
+  public invalidateCache(prefix?: string) {
+    if (!prefix) {
+      this.cache.clear();
+      return;
+    }
+    for (const key of this.cache.keys()) {
+      if (key.includes(prefix)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   public setToken(token: string | null) {
     this.token = token;
+    this.invalidateCache();
     if (token) {
       localStorage.setItem('simrt_mobile_access_token', token);
     } else {
@@ -48,6 +68,7 @@ class MobileApiClient {
           this.setToken(null);
           localStorage.removeItem('simrt_mobile_user');
           window.dispatchEvent(new CustomEvent('simrt_unauthorized'));
+          window.dispatchEvent(new CustomEvent('simrt:unauthorized'));
         }
         const error = new Error(json.error?.message || 'Permintaan gagal diproses') as any;
         error.code = json.error?.code || 'API_ERROR';
@@ -62,7 +83,11 @@ class MobileApiClient {
     }
   }
 
-  public async get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  public async get<T>(
+    endpoint: string,
+    params?: Record<string, string | number | boolean | undefined>,
+    options: { bypassCache?: boolean; ttlMs?: number } = {}
+  ): Promise<T> {
     let url = endpoint;
     if (params) {
       const searchParams = new URLSearchParams();
@@ -76,10 +101,25 @@ class MobileApiClient {
         url += (url.includes('?') ? '&' : '?') + qs;
       }
     }
-    return this.request<T>(url, { method: 'GET' });
+
+    const cacheKey = `${this.token || 'anon'}:${url}`;
+    const now = Date.now();
+    const ttl = options.ttlMs ?? this.defaultTtl;
+
+    if (!options.bypassCache && this.cache.has(cacheKey)) {
+      const entry = this.cache.get(cacheKey)!;
+      if (now - entry.timestamp < ttl) {
+        return entry.data as T;
+      }
+    }
+
+    const data = await this.request<T>(url, { method: 'GET' });
+    this.cache.set(cacheKey, { data, timestamp: now });
+    return data;
   }
 
   public async post<T>(endpoint: string, body?: any): Promise<T> {
+    this.invalidateCache();
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
@@ -87,6 +127,7 @@ class MobileApiClient {
   }
 
   public async upload<T>(endpoint: string, formData: FormData): Promise<T> {
+    this.invalidateCache();
     return this.request<T>(endpoint, {
       method: 'POST',
       body: formData,

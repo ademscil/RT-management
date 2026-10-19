@@ -18,7 +18,7 @@ export const Badge: React.FC<BadgeProps> = ({ className, variant = 'default', ch
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-colors',
+        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap shrink-0',
         variants[variant],
         className
       )}

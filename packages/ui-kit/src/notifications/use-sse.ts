@@ -44,98 +44,116 @@ export function useSSE({ url, token, onEvent, playChime = true }: UseSSEOptions)
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastEvent, setLastEvent] = useState<SSEEventData | null>(null);
 
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+
+  const playChimeRef = useRef(playChime);
+  playChimeRef.current = playChime;
+
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
 
   const connect = useCallback(() => {
-    if (!token) return;
+    if (!token || !url) return;
 
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
-    const sseUrl = `${url}?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(sseUrl);
-    eventSourceRef.current = es;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
 
-    es.onopen = () => {
-      setIsConnected(true);
-      retryCountRef.current = 0;
-    };
+    try {
+      const sseUrl = `${url}?token=${encodeURIComponent(token)}`;
+      const es = new EventSource(sseUrl);
+      eventSourceRef.current = es;
 
-    es.addEventListener('connected', () => {
-      setIsConnected(true);
-      retryCountRef.current = 0;
-    });
+      es.onopen = () => {
+        setIsConnected((prev) => (!prev ? true : prev));
+        retryCountRef.current = 0;
+      };
 
-    es.addEventListener('system', () => {
-      setIsConnected(true);
-      retryCountRef.current = 0;
-    });
+      es.addEventListener('connected', () => {
+        setIsConnected((prev) => (!prev ? true : prev));
+        retryCountRef.current = 0;
+      });
 
-    es.addEventListener('notification', (e) => {
-      try {
-        const data: SSEEventData = JSON.parse(e.data);
-        setLastEvent(data);
-        setUnreadCount((prev) => prev + 1);
+      es.addEventListener('system', () => {
+        setIsConnected((prev) => (!prev ? true : prev));
+        retryCountRef.current = 0;
+      });
 
-        if (playChime) {
-          playWebAudioChime();
+      es.addEventListener('notification', (e) => {
+        try {
+          const data: SSEEventData = JSON.parse(e.data);
+          setLastEvent(data);
+          setUnreadCount((prev) => prev + 1);
+
+          if (playChimeRef.current) {
+            playWebAudioChime();
+          }
+
+          // Show Ephemeral Toast
+          notify.info({
+            title: data.title,
+            description: data.message,
+          });
+
+          onEventRef.current?.(data);
+        } catch (err) {
+          console.error('Failed to parse SSE notification payload:', err);
+        }
+      });
+
+      es.addEventListener('security_alert', (e) => {
+        try {
+          const data: SSEEventData = JSON.parse(e.data);
+          setLastEvent(data);
+          setUnreadCount((prev) => prev + 1);
+
+          if (playChimeRef.current) {
+            playWebAudioChime();
+          }
+
+          notify.security({
+            title: data.title,
+            description: data.message,
+          });
+
+          onEventRef.current?.(data);
+        } catch (err) {
+          console.error('Failed to parse SSE security alert payload:', err);
+        }
+      });
+
+      es.onerror = () => {
+        setIsConnected((prev) => (prev ? false : prev));
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
         }
 
-        // Show Ephemeral Toast
-        notify.info({
-          title: data.title,
-          description: data.message,
-        });
+        // Exponential backoff to avoid hammering server or spinning in loop
+        retryCountRef.current++;
+        const delay =
+          retryCountRef.current > 5
+            ? 60000 // 60s cooldown if repeated failures
+            : Math.min(5000 * retryCountRef.current, 30000);
 
-        if (onEvent) {
-          onEvent(data);
-        }
-      } catch (err) {
-        console.error('Failed to parse SSE notification payload:', err);
-      }
-    });
-
-    es.addEventListener('security_alert', (e) => {
-      try {
-        const data: SSEEventData = JSON.parse(e.data);
-        setLastEvent(data);
-        setUnreadCount((prev) => prev + 1);
-
-        if (playChime) {
-          playWebAudioChime();
-        }
-
-        notify.security({
-          title: data.title,
-          description: data.message,
-        });
-
-        if (onEvent) {
-          onEvent(data);
-        }
-      } catch (err) {
-        console.error('Failed to parse SSE security alert payload:', err);
-      }
-    });
-
-    es.onerror = () => {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (token) {
+            connect();
+          }
+        }, delay);
+      };
+    } catch {
       setIsConnected(false);
-      es.close();
-
-      // Exponential backoff: if repeated failures occur, back off to 30s quietly
-      retryCountRef.current++;
-      const delay = retryCountRef.current > 3 ? 30000 : Math.min(2000 * retryCountRef.current, 15000);
-
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (token) {
-          connect();
-        }
-      }, delay);
-    };
-  }, [url, token, onEvent, playChime]);
+    }
+  }, [url, token]);
 
   useEffect(() => {
     connect();

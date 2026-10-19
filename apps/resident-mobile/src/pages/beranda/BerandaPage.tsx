@@ -138,7 +138,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
 
           {/* Right Column: Hero Digital Resident Card (Glassmorphism ID) */}
           <div className="lg:col-span-5">
-            <div className="rounded-2xl p-5 bg-slate-950/80 border border-teal-500/30 shadow-xl backdrop-blur-md space-y-4">
+            <div className="rounded-2xl p-5 bg-slate-950/90 border border-teal-500/30 shadow-xl space-y-4">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-widest text-teal-400 block">

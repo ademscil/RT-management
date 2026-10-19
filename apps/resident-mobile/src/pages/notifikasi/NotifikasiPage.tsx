@@ -142,13 +142,13 @@ export const NotifikasiPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-24 md:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bell className="w-5 h-5 text-teal-700" />
-            Kotak Masuk & Notifikasi
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Bell className="w-5 h-5 text-teal-700 shrink-0" />
+            <span className="truncate">Kotak Masuk & Notifikasi</span>
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1 sm:line-clamp-none">
             Pemberitahuan real-time Server-Sent Events & alarm jadwal
           </p>
         </div>
@@ -156,9 +156,9 @@ export const NotifikasiPage: React.FC = () => {
         <button
           type="button"
           onClick={handleMarkAllRead}
-          className="text-xs font-semibold text-teal-700 dark:text-teal-400 flex items-center gap-1 hover:underline"
+          className="text-xs font-semibold text-teal-700 dark:text-teal-400 flex items-center gap-1 hover:underline shrink-0 whitespace-nowrap"
         >
-          <CheckCheck className="w-4 h-4" /> Tandai Semua Dibaca
+          <CheckCheck className="w-4 h-4 shrink-0" /> Tandai Semua Dibaca
         </button>
       </div>
 

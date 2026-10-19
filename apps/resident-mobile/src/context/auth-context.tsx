@@ -52,10 +52,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     window.addEventListener('simrt:unauthorized', handleUnauthorized);
+    window.addEventListener('simrt_unauthorized', handleUnauthorized);
     setIsLoading(false);
 
     return () => {
       window.removeEventListener('simrt:unauthorized', handleUnauthorized);
+      window.removeEventListener('simrt_unauthorized', handleUnauthorized);
     };
   }, []);
 

@@ -36,6 +36,7 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { namaSurat: 'asc' },
     });
 
+    reply.header('Cache-Control', 'private, max-age=120, stale-while-revalidate=300');
     return reply.send({
       success: true,
       data: templates.map((t) => ({

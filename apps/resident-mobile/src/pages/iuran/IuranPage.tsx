@@ -150,10 +150,11 @@ export const IuranPage: React.FC = () => {
       </div>
 
       {/* Tabs Switch */}
-      <div className="flex bg-slate-200/80 dark:bg-slate-800 p-1 rounded-2xl">
+      <div className="flex bg-slate-200/80 dark:bg-slate-800 p-1 rounded-2xl gap-1">
         <button
+          type="button"
           onClick={() => setActiveTab('TAGIHAN')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
             activeTab === 'TAGIHAN'
               ? 'bg-white dark:bg-slate-900 text-teal-700 shadow-xs'
               : 'text-slate-600 dark:text-slate-400'
@@ -162,8 +163,9 @@ export const IuranPage: React.FC = () => {
           Tagihan Rumah Saya
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('BUKU_KAS')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
             activeTab === 'BUKU_KAS'
               ? 'bg-white dark:bg-slate-900 text-teal-700 shadow-xs'
               : 'text-slate-600 dark:text-slate-400'

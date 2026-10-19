@@ -16,6 +16,27 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('html5-qrcode')) {
+              return 'vendor-qrcode';
+            }
+            if (id.includes('react') || id.includes('scheduler')) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('@capacitor')) {
+              return 'vendor-capacitor';
+            }
+            return 'vendor-utils';
+          }
+        },
+      },
+    },
   },
 });

@@ -36,7 +36,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none pb-[max(env(safe-area-inset-bottom),12px)] px-3 md:hidden">
-      <nav className="pointer-events-auto max-w-md mx-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-1.5 transition-all">
+      <nav className="pointer-events-auto max-w-md mx-auto bg-white/98 dark:bg-slate-900/98 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-1.5 transition-all">
         <div className="grid grid-cols-5 h-14">
           {navItems.map((item) => {
             const Icon = item.icon;

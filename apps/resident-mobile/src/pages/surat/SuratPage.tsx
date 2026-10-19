@@ -123,13 +123,13 @@ export const SuratPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-24 md:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-teal-700" />
-            Layanan E-Surat RT
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-teal-700 shrink-0" />
+            <span className="truncate">Layanan E-Surat RT</span>
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1 sm:line-clamp-none">
             Pengajuan surat pengantar resmi ber-QR & tanda tangan Ed25519
           </p>
         </div>
@@ -138,9 +138,9 @@ export const SuratPage: React.FC = () => {
           variant="primary"
           size="sm"
           onClick={() => setModalOpen(true)}
-          className="shadow-sm font-bold text-xs"
+          className="shadow-sm font-bold text-xs shrink-0 whitespace-nowrap"
         >
-          <Plus className="w-4 h-4" /> Buat Surat
+          <Plus className="w-4 h-4 shrink-0" /> Buat Surat
         </Button>
       </div>
 

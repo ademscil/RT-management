@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/auth-context.js';
 import { LoginPage } from './pages/login/LoginPage.js';
 import { ActivationPage } from './pages/activation/ActivationPage.js';
@@ -8,7 +8,9 @@ import { SuratPage } from './pages/surat/SuratPage.js';
 import { IuranPage } from './pages/iuran/IuranPage.js';
 import { NotifikasiPage } from './pages/notifikasi/NotifikasiPage.js';
 import { BottomNavigation, TabType } from './components/BottomNavigation.js';
-import { AppToaster, OfflineModeBanner, useSSE, notify } from '@simrt/ui-kit';
+import { AppToaster, OfflineModeBanner, useSSE } from '@simrt/ui-kit';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 import {
   Home,
   Users,
@@ -24,20 +26,28 @@ const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading, token, user, logout } = useAuth();
   const [authView, setAuthView] = useState<'LOGIN' | 'ACTIVATION'>('LOGIN');
   const [activeTab, setActiveTab] = useState<TabType>('beranda');
-  const [unreadCount, setUnreadCount] = useState<number>(2);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  // Initialize Native Android StatusBar (clean separation, dark icons on light app)
+  useEffect(() => {
+    if (Capacitor.isPluginAvailable('StatusBar')) {
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(() => {});
+      StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+    }
+  }, []);
+
+  // Stabilize SSE callback to prevent re-render loops
+  const handleSseEvent = useCallback((_event: any) => {
+    setUnreadCount((prev) => prev + 1);
+  }, []);
 
   // SSE Real-Time listener for resident notifications
   const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
   useSSE({
     url: `${apiUrl}/api/v1/notifications/stream`,
     token: isAuthenticated ? token : null,
-    onEvent: (event) => {
-      setUnreadCount((prev) => prev + 1);
-      notify.info({
-        title: event.title || 'Notifikasi Baru SIM-RT',
-        description: event.message || 'Ada informasi baru dari Pengurus RT.',
-      });
-    },
+    onEvent: handleSseEvent,
   });
 
   const desktopNavItems: Array<{ id: TabType; label: string; icon: React.ElementType; badge?: number }> = [
@@ -162,7 +172,7 @@ const MainLayout: React.FC = () => {
       </header>
 
       {/* Main Tab Screen Area - Responsive Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-28 md:py-6">
         {activeTab === 'beranda' && <BerandaPage onNavigateTab={(tab) => setActiveTab(tab)} />}
         {activeTab === 'keluarga' && <KeluargaPage />}
         {activeTab === 'surat' && <SuratPage />}
