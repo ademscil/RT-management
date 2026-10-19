@@ -140,11 +140,11 @@ export const NotifikasiPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-24 pt-safe px-4">
+    <div className="space-y-6 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Bell className="w-5 h-5 text-teal-700" />
             Kotak Masuk & Notifikasi
           </h2>
@@ -154,6 +154,7 @@ export const NotifikasiPage: React.FC = () => {
         </div>
 
         <button
+          type="button"
           onClick={handleMarkAllRead}
           className="text-xs font-semibold text-teal-700 dark:text-teal-400 flex items-center gap-1 hover:underline"
         >

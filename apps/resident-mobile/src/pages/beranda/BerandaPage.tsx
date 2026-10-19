@@ -9,7 +9,6 @@ import {
   Calendar,
   MapPin,
   ChevronRight,
-  Accessibility,
   HeartHandshake,
   ShieldCheck,
   UserCheck,
@@ -27,7 +26,7 @@ interface BerandaPageProps {
 }
 
 export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
-  const { user, isElderMode, toggleElderMode } = useAuth();
+  const { user } = useAuth();
   const [emergencyDrawerOpen, setEmergencyDrawerOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'SEMUA' | 'KEBERSIHAN' | 'SOSIAL' | 'KEAMANAN'>('SEMUA');
   const [iuranStatus, setIuranStatus] = useState<{ isPaid: boolean; bulan: string; nominal: number } | null>(null);
@@ -115,94 +114,53 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
   return (
     <div className="space-y-6 pb-24 md:pb-8">
       {/* 1. App Header with Warm Neighborhood Greeting & Digital Resident Card */}
-      <div className="relative bg-gradient-to-br from-teal-900 via-teal-950 to-slate-950 text-white p-5 sm:p-7 md:p-8 rounded-3xl shadow-xl overflow-hidden">
+      <div className="relative bg-gradient-to-br from-teal-900 via-slate-900 to-teal-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-teal-800/40 overflow-hidden">
         {/* Subtle decorative circles */}
         <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-teal-500/10 blur-2xl pointer-events-none" />
         <div className="absolute top-20 -left-12 w-36 h-36 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           {/* Left Column: Greeting and Neighborhood Info */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-400 p-0.5 shadow-md shadow-teal-900/50">
-                  <div className="w-full h-full bg-teal-950 rounded-[14px] flex items-center justify-center font-black text-white text-base">
-                    RT
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium text-teal-300/90 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-teal-400" /> RT 05 / RW 02 Sukamaju
-                  </p>
-                  <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight leading-tight">
-                    {getGreeting()},{' '}
-                    <span className="text-teal-200">
-                      {user?.namaLengkap ? user.namaLengkap.split(' ')[0] : 'Warga'}
-                    </span>
-                  </h1>
-                </div>
-              </div>
-
-              {/* Mobile-only elder mode toggle */}
-              <div className="flex items-center gap-2 md:hidden">
-                <button
-                  type="button"
-                  onClick={toggleElderMode}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all ${
-                    isElderMode
-                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
-                      : 'bg-teal-900/60 hover:bg-teal-800/80 text-teal-200 border border-teal-700/60'
-                  }`}
-                  title="Mode Tulisan Besar untuk Orang Tua"
-                  aria-label="Mode Tulisan Besar untuk Orang Tua"
-                >
-                  <Accessibility className="w-4 h-4" />
-                  <span className="text-[11px]">{isElderMode ? '125%' : 'A+'}</span>
-                </button>
-              </div>
+          <div className="lg:col-span-7 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-950/80 border border-teal-500/30 text-teal-300 text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              {todayFormatted} • Lingkungan Aman & Kondusif
             </div>
 
-            <p className="text-xs text-slate-300">
-              Selamat datang di portal pelayanan digital warga RT 05 / RW 02 Sukamaju. Anda dapat mengurus surat pengantar, mengecek iuran kas, dan melihat jadwal kegiatan warga secara mandiri.
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {getGreeting()}, <span className="text-teal-300">{user?.namaLengkap || 'Warga'}</span>
+            </h1>
+
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-xl">
+              Portal pelayanan mandiri warga RT 05 / RW 02 Kelurahan Sukamaju. Anda dapat mengurus surat pengantar resmi ber-QR, memantau transparansi kas, dan melihat jadwal kegiatan warga secara terpadu.
             </p>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] px-3.5 py-2 rounded-xl bg-teal-900/40 border border-teal-700/40 text-teal-200/90">
-              <span>{todayFormatted}</span>
-              <span className="flex items-center gap-1.5 text-emerald-300 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-                Lingkungan Aman & Kondusif
-              </span>
-            </div>
           </div>
 
           {/* Right Column: Hero Digital Resident Card (Glassmorphism ID) */}
-          <div className="relative rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-slate-900/95 via-teal-950/90 to-slate-900/95 border border-teal-500/30 shadow-2xl backdrop-blur-md overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl" />
-
-            <div className="relative z-10 space-y-4">
+          <div className="lg:col-span-5">
+            <div className="rounded-2xl p-5 bg-slate-950/80 border border-teal-500/30 shadow-xl backdrop-blur-md space-y-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-teal-400 block">
-                    KARTU IDENTITAS WARGA RESMI
+                  <span className="text-[10px] font-black uppercase tracking-widest text-teal-400 block">
+                    KARTU IDENTITAS RESMI WARGA
                   </span>
-                  <h3 className="text-lg sm:text-xl font-black text-white tracking-wide mt-0.5">
+                  <h3 className="text-lg font-black text-white tracking-wide mt-0.5">
                     {user?.blokRumah || 'Kavling Blok RT 05'}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-300 font-medium">
+                  <p className="text-xs text-slate-300 font-medium">
                     {user?.namaLengkap || user?.username}
                   </p>
                 </div>
 
-                <div className="w-10 h-10 rounded-2xl bg-teal-800/50 border border-teal-400/30 flex items-center justify-center text-teal-300 shadow-inner">
+                <div className="w-10 h-10 rounded-xl bg-teal-900/60 border border-teal-500/30 flex items-center justify-center text-teal-300 shadow-inner shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-teal-800/50 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-teal-300 font-mono">
-                  <UserCheck className="w-4 h-4 text-teal-400" />
-                  <span>Status: Terverifikasi</span>
-                </div>
+              <div className="pt-3 border-t border-teal-900/60 flex items-center justify-between text-xs">
+                <span className="text-emerald-400 font-mono flex items-center gap-1.5 font-semibold text-[11px]">
+                  <UserCheck className="w-3.5 h-3.5" /> Status: Terverifikasi
+                </span>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('keluarga')}
@@ -262,10 +220,10 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
                   if (item.action) item.action();
                   else onNavigateTab(item.id as TabType);
                 }}
-                className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md active:scale-95 transition-all ${item.bg}`}
+                className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md active:scale-95 transition-all min-h-[115px] ${item.bg}`}
               >
-                <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center mb-2 shadow-xs">
-                  <Icon className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center mb-2 shadow-xs">
+                  <Icon className="w-5 h-5" />
                 </div>
                 <strong className="text-sm font-bold leading-tight block text-slate-900 dark:text-slate-100">
                   {item.title}
@@ -335,13 +293,13 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
 
                   <div className="text-xs text-slate-500 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <p className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                      <Calendar className="w-4 h-4 text-teal-600 flex-shrink-0" /> {item.waktu}
+                      <Calendar className="w-4 h-4 text-teal-600 shrink-0" /> {item.waktu}
                     </p>
                     <p className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" /> {item.lokasi}
+                      <MapPin className="w-4 h-4 text-slate-400 shrink-0" /> {item.lokasi}
                     </p>
                     <p className="flex items-center gap-2 text-slate-500">
-                      <HeartHandshake className="w-4 h-4 text-slate-400 flex-shrink-0" /> Koordinator:{' '}
+                      <HeartHandshake className="w-4 h-4 text-slate-400 shrink-0" /> Koordinator:{' '}
                       {item.penanggungJawab}
                     </p>
                   </div>
@@ -358,7 +316,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
             <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                     iuranStatus.isPaid
                       ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600'
                       : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600'
@@ -446,7 +404,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
         </div>
       </div>
 
-      {/* Emergency Bottom Drawer */}
+      {/* Emergency Bottom Drawer / Modal */}
       <EmergencyContactsDrawer
         isOpen={emergencyDrawerOpen}
         onClose={() => setEmergencyDrawerOpen(false)}

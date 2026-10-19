@@ -135,11 +135,11 @@ export const IuranPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-24 pt-safe px-4">
+    <div className="space-y-6 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-teal-700" />
             Iuran & Kas Transparan RT
           </h2>
@@ -323,7 +323,7 @@ export const IuranPage: React.FC = () => {
       {/* Payment Drawer Modal */}
       {payModalOpen && selectedBill && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom pb-safe">
+          <div className="w-full max-w-md sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom pb-safe">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
@@ -334,8 +334,10 @@ export const IuranPage: React.FC = () => {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setPayModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500"
+                aria-label="Tutup Dialog Pembayaran"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

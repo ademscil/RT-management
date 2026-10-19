@@ -42,8 +42,8 @@ export const EmergencyContactsDrawer: React.FC<EmergencyContactsDrawerProps> = (
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl p-6 space-y-5 animate-in slide-in-from-bottom pb-safe border-t border-slate-200 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
+      <div className="w-full max-w-md sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 space-y-5 animate-in slide-in-from-bottom pb-safe border border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-red-100 text-red-700 flex items-center justify-center">
@@ -55,7 +55,9 @@ export const EmergencyContactsDrawer: React.FC<EmergencyContactsDrawerProps> = (
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Tutup Kontak Darurat"
             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
           >
             <X className="w-4 h-4" />

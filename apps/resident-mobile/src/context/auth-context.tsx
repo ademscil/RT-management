@@ -15,12 +15,10 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isElderMode: boolean;
   login: (username: string, password: string) => Promise<void>;
   loginWithRecovery: (username: string, recoveryCode: string) => Promise<void>;
   setAuthSession: (token: string, user: ResidentUser) => void;
   logout: () => void;
-  toggleElderMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,17 +27,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<ResidentUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isElderMode, setIsElderMode] = useState<boolean>(() => {
-    return localStorage.getItem('simrt_elder_mode') === 'true';
-  });
-
-  useEffect(() => {
-    if (isElderMode) {
-      document.body.classList.add('text-elder');
-    } else {
-      document.body.classList.remove('text-elder');
-    }
-  }, [isElderMode]);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('simrt_mobile_access_token');
@@ -59,13 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleUnauthorized = () => {
       setToken(null);
       setUser(null);
+      mobileApi.setToken(null);
+      localStorage.removeItem('simrt_mobile_access_token');
+      localStorage.removeItem('simrt_mobile_user');
     };
 
-    window.addEventListener('simrt_unauthorized', handleUnauthorized);
+    window.addEventListener('simrt:unauthorized', handleUnauthorized);
     setIsLoading(false);
 
     return () => {
-      window.removeEventListener('simrt_unauthorized', handleUnauthorized);
+      window.removeEventListener('simrt:unauthorized', handleUnauthorized);
     };
   }, []);
 
@@ -77,46 +67,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('simrt_mobile_user', JSON.stringify(newUser));
   };
 
-  const login = async (username: string, password: string) => {
+  const login = async (usernameInput: string, passwordInput: string) => {
     const res = await mobileApi.post<{
       accessToken: string;
       user: {
         id: string;
         username: string;
         role: string;
-        namaLengkap: string;
+        namaLengkap?: string;
         blokRumah?: string;
       };
-    }>('/auth/login', { username, password });
+    }>('/auth/login', {
+      username: usernameInput,
+      password: passwordInput,
+    });
 
     const residentUser: ResidentUser = {
       id: res.user.id,
       username: res.user.username,
       role: res.user.role,
-      namaLengkap: res.user.namaLengkap,
+      namaLengkap: res.user.namaLengkap || res.user.username,
       blokRumah: res.user.blokRumah || 'Blok RT 05',
     };
 
     setAuthSession(res.accessToken, residentUser);
   };
 
-  const loginWithRecovery = async (username: string, recoveryCode: string) => {
+  const loginWithRecovery = async (usernameInput: string, recoveryCodeInput: string) => {
     const res = await mobileApi.post<{
       accessToken: string;
       user: {
         id: string;
         username: string;
         role: string;
-        namaLengkap: string;
+        namaLengkap?: string;
         blokRumah?: string;
       };
-    }>('/auth/recovery-login', { username, recoveryCode });
+    }>('/auth/recovery-login', {
+      username: usernameInput,
+      recoveryCode: recoveryCodeInput,
+    });
 
     const residentUser: ResidentUser = {
       id: res.user.id,
       username: res.user.username,
       role: res.user.role,
-      namaLengkap: res.user.namaLengkap,
+      namaLengkap: res.user.namaLengkap || res.user.username,
       blokRumah: res.user.blokRumah || 'Blok RT 05',
     };
 
@@ -131,14 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('simrt_mobile_user');
   };
 
-  const toggleElderMode = () => {
-    setIsElderMode((prev) => {
-      const next = !prev;
-      localStorage.setItem('simrt_elder_mode', String(next));
-      return next;
-    });
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -146,12 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isAuthenticated: !!token && !!user,
         isLoading,
-        isElderMode,
         login,
         loginWithRecovery,
         setAuthSession,
         logout,
-        toggleElderMode,
       }}
     >
       {children}

@@ -107,8 +107,8 @@ export const IdCardScannerModal: React.FC<IdCardScannerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/90 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in">
+      <div className="w-full max-w-md sm:max-w-lg bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 flex flex-col max-h-[92vh]">
         {/* Top Header */}
         <div className="p-4 flex items-center justify-between border-b border-slate-800 text-white">
           <div>
@@ -116,11 +116,13 @@ export const IdCardScannerModal: React.FC<IdCardScannerModalProps> = ({
             <p className="text-[11px] text-teal-400">Posisikan dokumen tegak lurus di dalam bingkai</p>
           </div>
           <button
+            type="button"
             onClick={() => {
               if (stream) stream.getTracks().forEach((t) => t.stop());
               onClose();
             }}
-            className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white"
+            aria-label="Tutup Pemindaian KTP"
+            className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

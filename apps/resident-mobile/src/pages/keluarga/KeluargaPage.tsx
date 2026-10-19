@@ -149,11 +149,11 @@ export const KeluargaPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-24 pt-safe px-4">
+    <div className="space-y-6 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Users className="w-5 h-5 text-teal-700" />
             Kartu Keluarga Digital
           </h2>
@@ -163,12 +163,14 @@ export const KeluargaPage: React.FC = () => {
         </div>
 
         <button
+          type="button"
           onClick={() => setRecoveryModalOpen(true)}
-          className="p-2 rounded-xl bg-violet-50 text-violet-700 border border-violet-200 text-xs font-bold flex items-center gap-1.5"
+          className="p-2 sm:px-3 sm:py-2 rounded-xl bg-violet-50 text-violet-700 border border-violet-200 text-xs font-bold flex items-center gap-1.5"
           title="Lihat Kode Pemulihan Offline"
+          aria-label="Lihat Kode Pemulihan Offline"
         >
           <KeyRound className="w-4 h-4" />
-          <span>Kunci</span>
+          <span>Kunci Pemulihan</span>
         </button>
       </div>
 

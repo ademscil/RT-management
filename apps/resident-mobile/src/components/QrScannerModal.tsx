@@ -81,7 +81,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
         {/* Header */}
         <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <div>
@@ -89,13 +89,15 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
             <p className="text-[11px] text-slate-500">Arahkan kamera ke QR pada kartu cetak RT</p>
           </div>
           <button
+            type="button"
             onClick={() => {
               if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
                 html5QrCodeRef.current.stop().catch(() => {});
               }
               onClose();
             }}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800"
+            aria-label="Tutup Pemindai QR"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
