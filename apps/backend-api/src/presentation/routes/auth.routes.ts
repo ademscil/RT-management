@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { verify, hash } from '@node-rs/argon2';
+import { hashPassword, verifyPassword } from '../../infrastructure/crypto/password-hasher.js';
 import crypto from 'node:crypto';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import {
@@ -72,7 +72,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const isPasswordValid = await verify(user.passwordHash, password);
+    const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
       const newFailedAttempts = user.failedAttempts + 1;
@@ -201,7 +201,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const passwordHash = await hash(password, { memoryCost: 65536, timeCost: 3 });
+    const passwordHash = await hashPassword(password);
 
     // Transaction to create User, generate 8 recovery codes, and mark invite claimed
     const result = await prisma.$transaction(async (tx: any) => {
@@ -220,7 +220,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       for (let i = 1; i <= 8; i++) {
         const rawCode = `RC${i}${Math.floor(100000 + Math.random() * 900000)}`.substring(0, 8);
         rawRecoveryCodes.push(rawCode);
-        const codeHash = await hash(rawCode);
+        const codeHash = await hashPassword(rawCode);
         await tx.recoveryCode.create({
           data: {
             userId: newUser.id,
@@ -306,7 +306,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     // Verify code against unused recovery code hashes
     let matchedCodeId: string | null = null;
     for (const codeRecord of user.recoveryCodes) {
-      const isMatch = await verify(codeRecord.codeHash, recoveryCode);
+      const isMatch = await verifyPassword(recoveryCode, codeRecord.codeHash);
       if (isMatch) {
         matchedCodeId = codeRecord.id;
         break;
@@ -325,7 +325,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Update password and mark code used
-    const newPasswordHash = await hash(newPassword, { memoryCost: 65536, timeCost: 3 });
+    const newPasswordHash = await hashPassword(newPassword);
 
     await prisma.$transaction([
       prisma.user.update({

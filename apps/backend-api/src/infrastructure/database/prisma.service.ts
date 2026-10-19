@@ -1,7 +1,18 @@
 import { createRequire } from 'node:module';
 
-const require = createRequire(import.meta.url);
-const { PrismaClient } = require('@prisma/client');
+const getPrismaClient = () => {
+  try {
+    if (typeof require !== 'undefined') {
+      return require('@prisma/client').PrismaClient;
+    }
+    const req = createRequire(import.meta.url);
+    return req('@prisma/client').PrismaClient;
+  } catch {
+    return null;
+  }
+};
+
+const PrismaClient = getPrismaClient();
 
 export class PrismaService {
   private static instance: any;
