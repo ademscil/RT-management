@@ -218,68 +218,70 @@ export const KeluargaPage: React.FC = () => {
               Daftar Anggota Keluarga ({familyData.anggota.length} Orang)
             </h3>
 
-            {familyData.anggota.map((w) => (
-              <Card key={w.id} className="hover:shadow-md transition-shadow overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
-                          {w.namaLengkap}
-                        </h4>
-                        <Badge
-                          variant={w.hubunganKeluarga === 'KEPALA_KELUARGA' ? 'pii' : 'outline'}
-                        >
-                          {w.statusKeluarga}
-                        </Badge>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {familyData.anggota.map((w) => (
+                <Card key={w.id} className="hover:shadow-md transition-shadow overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                            {w.namaLengkap}
+                          </h4>
+                          <Badge
+                            variant={w.hubunganKeluarga === 'KEPALA_KELUARGA' ? 'pii' : 'outline'}
+                          >
+                            {w.statusKeluarga}
+                          </Badge>
+                        </div>
+                        <p className="text-xs font-mono text-slate-500 mt-0.5">
+                          NIK: {w.nikMasked}
+                        </p>
                       </div>
-                      <p className="text-xs font-mono text-slate-500 mt-0.5">
-                        NIK: {w.nikMasked}
-                      </p>
+
+                      <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-slate-800 flex items-center justify-center text-teal-700">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
                     </div>
 
-                    <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-slate-800 flex items-center justify-center text-teal-700">
-                      <UserCheck className="w-4 h-4" />
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">Jenis Kelamin:</span>
+                        <strong>{w.jenisKelamin === 'L' ? 'Laki-Laki' : 'Perempuan'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">Gol. Darah:</span>
+                        <strong>{w.golonganDarah || '-'}</strong>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block">Jenis Kelamin:</span>
-                      <strong>{w.jenisKelamin === 'L' ? 'Laki-Laki' : 'Perempuan'}</strong>
+                    {/* Actions: Reveal NIK & Update KTP Photo */}
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => handleOpenPiiReveal(w.id)}
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Buka NIK Asli
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => handleOpenKtpCamera(w.id, w.namaLengkap)}
+                      >
+                        <Camera className="w-3.5 h-3.5" /> Unggah KTP
+                      </Button>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 block">Gol. Darah:</span>
-                      <strong>{w.golonganDarah || '-'}</strong>
-                    </div>
-                  </div>
-
-                  {/* Actions: Reveal NIK & Update KTP Photo */}
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 text-xs"
-                      onClick={() => handleOpenPiiReveal(w.id)}
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Buka NIK Asli
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1 text-xs"
-                      onClick={() => handleOpenKtpCamera(w.id, w.namaLengkap)}
-                    >
-                      <Camera className="w-3.5 h-3.5" /> Unggah KTP
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
 
-          {/* Logout Section */}
-          <div className="pt-4">
+          {/* Logout Section (Mobile only) */}
+          <div className="pt-4 md:hidden">
             <Button
               variant="destructive"
               size="md"

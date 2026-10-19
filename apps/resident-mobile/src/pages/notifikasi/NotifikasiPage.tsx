@@ -203,7 +203,7 @@ export const NotifikasiPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map((item) => {
             const { icon: Icon, color } = getIcon(item.type);
             return (

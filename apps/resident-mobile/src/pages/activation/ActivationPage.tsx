@@ -147,20 +147,21 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between p-4 max-w-md mx-auto">
-      {/* Header */}
-      <div className="pt-6 space-y-2 text-center">
-        <div className="inline-flex w-12 h-12 rounded-2xl bg-teal-600 items-center justify-center text-white shadow-lg shadow-teal-900/50 mb-1">
-          <QrCode className="w-6 h-6" />
+    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-10">
+      <div className="w-full max-w-xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="space-y-2 text-center">
+          <div className="inline-flex w-12 h-12 rounded-2xl bg-teal-600 items-center justify-center text-white shadow-lg shadow-teal-900/50 mb-1">
+            <QrCode className="w-6 h-6" />
+          </div>
+          <h1 className="text-xl font-black tracking-tight text-white">Aktivasi Mandiri Warga RT</h1>
+          <p className="text-xs text-teal-400 font-medium">RT 05 / RW 02 Kel. Sukamaju, Cilodong</p>
         </div>
-        <h1 className="text-xl font-black tracking-tight text-white">Aktivasi Mandiri Warga RT</h1>
-        <p className="text-xs text-teal-400 font-mono">Zero-MDN: Tanpa Nomor HP & Tanpa SMS</p>
-      </div>
 
-      {/* Step Contents */}
-      <div className="my-auto py-6">
-        {step === 1 && (
-          <div className="bg-slate-800/90 rounded-3xl p-6 border border-slate-700/80 shadow-2xl space-y-5">
+        {/* Step Contents */}
+        <div>
+          {step === 1 && (
+            <div className="bg-slate-900/90 rounded-3xl p-6 sm:p-7 border border-slate-800 shadow-2xl space-y-5">
             <div className="space-y-1">
               <h2 className="text-sm font-bold text-white">Langkah 1: Pindai Kartu Fisik</h2>
               <p className="text-xs text-slate-400">
@@ -346,6 +347,7 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
         >
           Sudah punya akun? <strong>Kembali ke Halaman Masuk</strong>
         </button>
+      </div>
       </div>
 
       {/* QR Scanner Modal */}

@@ -175,7 +175,7 @@ export const IuranPage: React.FC = () => {
 
       {/* TAB 1: TAGIHAN */}
       {activeTab === 'TAGIHAN' && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {isLoading ? (
             <div className="space-y-3">
               <div className="h-28 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
@@ -269,7 +269,7 @@ export const IuranPage: React.FC = () => {
           {isLoading ? (
             <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
           ) : (
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {kasList.map((k) => {
                 const isIncome = k.jenisTransaksi === 'INCOME';
                 return (

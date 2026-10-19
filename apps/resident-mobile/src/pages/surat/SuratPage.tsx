@@ -168,7 +168,7 @@ export const SuratPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {suratList.map((surat) => {
             const step = getTimelineStep(surat.status);
             const isCompleted = surat.status === 'SIGNED_KETUA_RT';
