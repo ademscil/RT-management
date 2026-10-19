@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             {!isCollapsed && (
               <div className="truncate">
                 <h1 className="text-sm font-bold text-white tracking-wide">SIM-RT 05 / RW 02</h1>
-                <p className="text-[11px] text-teal-400 font-mono">Kel. Sukamaju, Depok</p>
+                <p className="text-[11px] text-teal-400 font-medium">Kel. Sukamaju, Depok</p>
               </div>
             )}
           </div>

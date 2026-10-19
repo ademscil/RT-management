@@ -143,10 +143,10 @@ export const KependudukanPage: React.FC = () => {
     loadHouses();
   }, []);
 
-  const handleSearchChange = (val: string) => {
+  const handleSearchChange = useCallback((val: string) => {
     setSearch(val);
     setMeta((prev) => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
   const handleOpenPiiModal = (warga: WargaItem) => {
     setPiiTargetWarga(warga);

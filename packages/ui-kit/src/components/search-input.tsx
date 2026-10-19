@@ -32,24 +32,47 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   const [searchTerm, setSearchTerm] = useState(initialValue);
   const [isDebouncing, setIsDebouncing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isFirstMount = useRef(true);
+  const lastEmittedValue = useRef(initialValue.trim());
+  const onChangeRef = useRef(onChange);
 
-  // Sync external value changes
+  // Keep latest onChange in ref
   useEffect(() => {
-    setSearchTerm(initialValue);
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Sync external value changes safely
+  useEffect(() => {
+    if (initialValue !== searchTerm) {
+      setSearchTerm(initialValue);
+      lastEmittedValue.current = initialValue.trim();
+    }
   }, [initialValue]);
 
-  // Debounce effect
+  // Debounce effect: ONLY trigger when user actually types and alters searchTerm
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+
+    if (searchTerm.trim() === lastEmittedValue.current) {
+      setIsDebouncing(false);
+      return;
+    }
+
     setIsDebouncing(true);
     const handler = setTimeout(() => {
-      onChange(searchTerm.trim());
+      const trimmed = searchTerm.trim();
+      lastEmittedValue.current = trimmed;
+      onChangeRef.current(trimmed);
       setIsDebouncing(false);
     }, debounceMs);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [searchTerm, debounceMs, onChange]);
+  }, [searchTerm, debounceMs]);
 
   // Press "/" to focus search input
   useEffect(() => {
@@ -71,6 +94,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
   const handleClear = () => {
     setSearchTerm('');
+    if (lastEmittedValue.current !== '') {
+      lastEmittedValue.current = '';
+      onChangeRef.current('');
+    }
+    setIsDebouncing(false);
     inputRef.current?.focus();
   };
 

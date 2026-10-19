@@ -48,7 +48,7 @@ export const LoginPage: React.FC = () => {
             RT
           </div>
           <h1 className="text-xl font-black text-white tracking-tight">SIM-RT COMMAND CENTER</h1>
-          <p className="text-xs text-teal-400 font-mono">RT 05 / RW 02 Kel. Sukamaju, Cilodong, Depok</p>
+          <p className="text-xs text-teal-400 font-medium">RT 05 / RW 02 Kel. Sukamaju, Cilodong, Depok</p>
         </div>
 
         {/* Login Card */}

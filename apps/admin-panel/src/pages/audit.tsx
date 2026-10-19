@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, CheckCircle2, AlertOctagon } from 'lucide-react';
 import { api } from '../services/api.js';
 import {
@@ -89,6 +89,11 @@ export const AuditPage: React.FC = () => {
     }
   };
 
+  const handleSearchChange = useCallback((val: string) => {
+    setSearch(val);
+    setMeta((prev) => ({ ...prev, page: 1 }));
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -145,10 +150,7 @@ export const AuditPage: React.FC = () => {
         <CardContent className="p-4">
           <SearchInput
             placeholder="Cari aksi (REVEAL_PII, LOGIN), entity, atau alamat IP..."
-            onChange={(val) => {
-              setSearch(val);
-              setMeta((prev) => ({ ...prev, page: 1 }));
-            }}
+            onChange={handleSearchChange}
             isLoading={isLoading}
             className="w-full sm:max-w-md"
           />

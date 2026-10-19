@@ -83,6 +83,11 @@ export const SuratPage: React.FC = () => {
   const [walkinKeperluan, setWalkinKeperluan] = useState('');
   const [isSubmittingWalkin, setIsSubmittingWalkin] = useState(false);
 
+  const handleSearchChange = useCallback((val: string) => {
+    setSearch(val);
+    setMeta((prev) => ({ ...prev, page: 1 }));
+  }, []);
+
   const fetchSurat = useCallback(
     async (page: number, limit: number, query: string, status: string) => {
       setIsLoading(true);
@@ -228,8 +233,13 @@ export const SuratPage: React.FC = () => {
             <FileText className="w-6 h-6 text-teal-700" />
             Pelayanan Surat Pengantar Warga
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Alur pengajuan: Verifikasi Berkas Sekretaris RT $\to$ Tanda Tangan Digital Ketua RT $\to$ Cetak Surat Ber-QR
+          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+            <span>Alur pengajuan:</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Verifikasi Berkas Sekretaris RT</span>
+            <span className="text-teal-600 font-bold">→</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Tanda Tangan Digital Ketua RT</span>
+            <span className="text-teal-600 font-bold">→</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Cetak Surat Ber-QR</span>
           </p>
         </div>
 
@@ -274,10 +284,7 @@ export const SuratPage: React.FC = () => {
         <CardContent className="p-4 flex items-center justify-between">
           <SearchInput
             placeholder="Cari nomor surat, tiket, nama pemohon, atau keperluan..."
-            onChange={(val) => {
-              setSearch(val);
-              setMeta((prev) => ({ ...prev, page: 1 }));
-            }}
+            onChange={handleSearchChange}
             isLoading={isLoading}
             className="w-full sm:max-w-md"
           />
