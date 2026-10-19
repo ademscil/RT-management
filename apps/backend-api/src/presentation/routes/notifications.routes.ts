@@ -13,20 +13,40 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
   const sseBroker = (fastify as any).sseBroker as SSEBrokerService;
 
   /**
-   * GET /api/v1/notifications/stream (Server-Sent Events Real-Time Stream)
+   * OPTIONS & GET /api/v1/notifications/stream (Server-Sent Events Real-Time Stream)
    */
+  fastify.options('/stream', async (request, reply) => {
+    const origin = request.headers.origin || '*';
+    reply.raw.setHeader('Access-Control-Allow-Origin', origin);
+    reply.raw.setHeader('Access-Control-Allow-Credentials', 'true');
+    reply.raw.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept');
+    reply.raw.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    reply.raw.statusCode = 204;
+    reply.raw.end();
+  });
+
   fastify.get('/stream', async (request, reply) => {
+    const origin = request.headers.origin || '*';
+    reply.raw.setHeader('Access-Control-Allow-Origin', origin);
+    reply.raw.setHeader('Access-Control-Allow-Credentials', 'true');
+    reply.raw.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept');
+
     // Authenticate token via query param (?token=...) or header for SSE compatibility
     const query = request.query as { token?: string };
     const authHeader = request.headers.authorization;
     const token = query.token || (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
 
     if (!token) {
-      return reply.status(401).send({
-        success: false,
-        error: { code: ErrorCode.ERR_UNAUTHORIZED, message: 'Token diperlukan untuk koneksi SSE.' },
-        timestamp: new Date().toISOString(),
-      });
+      reply.raw.setHeader('Content-Type', 'application/json');
+      reply.raw.statusCode = 401;
+      reply.raw.end(
+        JSON.stringify({
+          success: false,
+          error: { code: ErrorCode.ERR_UNAUTHORIZED, message: 'Token diperlukan untuk koneksi SSE.' },
+          timestamp: new Date().toISOString(),
+        })
+      );
+      return;
     }
 
     try {
@@ -38,14 +58,38 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
       reply.raw.setHeader('X-Accel-Buffering', 'no'); // Disable buffering in Caddy / Nginx
       reply.raw.flushHeaders();
 
+      // Send initial connect greeting immediately
+      reply.raw.write(
+        `event: connected\ndata: ${JSON.stringify({ status: 'connected', time: new Date().toISOString() })}\n\n`
+      );
+
       // Register client in SSE Broker
       sseBroker.registerClient(decoded.userId, decoded.role, reply);
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: ErrorCode.ERR_UNAUTHORIZED, message: 'Token kedaluwarsa atau tidak valid.' },
-        timestamp: new Date().toISOString(),
+
+      // Heartbeat keepalive ping
+      const pingTimer = setInterval(() => {
+        try {
+          reply.raw.write(': ping\n\n');
+        } catch {
+          clearInterval(pingTimer);
+        }
+      }, 15000);
+
+      request.raw.on('close', () => {
+        clearInterval(pingTimer);
+        sseBroker.unregisterClient(decoded.userId, reply);
       });
+    } catch {
+      reply.raw.setHeader('Content-Type', 'application/json');
+      reply.raw.statusCode = 401;
+      reply.raw.end(
+        JSON.stringify({
+          success: false,
+          error: { code: ErrorCode.ERR_UNAUTHORIZED, message: 'Token kedaluwarsa atau tidak valid.' },
+          timestamp: new Date().toISOString(),
+        })
+      );
+      return;
     }
   });
 

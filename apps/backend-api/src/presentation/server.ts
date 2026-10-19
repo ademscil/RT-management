@@ -23,25 +23,20 @@ export function createServer(): FastifyInstance {
   const sseBroker = new SSEBrokerService();
   (app as any).sseBroker = sseBroker;
 
-  // 1. Security Headers via Helmet
+  // 1. Security Headers via Helmet (configured for cross-origin API engine)
   app.register(helmet, {
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'blob:'],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        connectSrc: ["'self'"],
-      },
-    },
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
 
-  // 2. CORS configuration
+  // 2. CORS configuration (allowing web portal & admin panel cross-origin)
   app.register(cors, {
-    origin: true,
+    origin: (_origin, cb) => cb(null, true),
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
   });
 
   // 3. JWT configuration

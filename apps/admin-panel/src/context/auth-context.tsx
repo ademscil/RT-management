@@ -22,6 +22,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isTokenValid(jwtToken: string | null): boolean {
+  if (!jwtToken) return false;
+  try {
+    const parts = jwtToken.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) return true;
+    return Date.now() < payload.exp * 1000 - 10000;
+  } catch {
+    return false;
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(api.getToken());
@@ -29,7 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     async function loadUser() {
-      if (!token) {
+      if (!token || !isTokenValid(token)) {
+        api.setToken(null);
+        setToken(null);
+        setUser(null);
         setIsLoading(false);
         return;
       }

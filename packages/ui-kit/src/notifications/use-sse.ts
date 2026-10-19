@@ -64,6 +64,16 @@ export function useSSE({ url, token, onEvent, playChime = true }: UseSSEOptions)
       retryCountRef.current = 0;
     };
 
+    es.addEventListener('connected', () => {
+      setIsConnected(true);
+      retryCountRef.current = 0;
+    });
+
+    es.addEventListener('system', () => {
+      setIsConnected(true);
+      retryCountRef.current = 0;
+    });
+
     es.addEventListener('notification', (e) => {
       try {
         const data: SSEEventData = JSON.parse(e.data);
@@ -115,16 +125,14 @@ export function useSSE({ url, token, onEvent, playChime = true }: UseSSEOptions)
       setIsConnected(false);
       es.close();
 
-      // Exponential backoff with random jitter (1s - 30s)
-      const maxDelay = 30000;
-      const baseDelay = Math.min(1000 * Math.pow(1.5, retryCountRef.current), maxDelay);
-      const jitter = Math.random() * 1000;
-      const delay = baseDelay + jitter;
-
+      // Exponential backoff: if repeated failures occur, back off to 30s quietly
       retryCountRef.current++;
+      const delay = retryCountRef.current > 3 ? 30000 : Math.min(2000 * retryCountRef.current, 15000);
 
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        if (token) {
+          connect();
+        }
       }, delay);
     };
   }, [url, token, onEvent, playChime]);

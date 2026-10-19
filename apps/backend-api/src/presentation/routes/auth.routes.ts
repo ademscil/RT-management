@@ -117,8 +117,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       role: user.role as UserRole,
     };
 
-    const accessToken = fastify.jwt.sign(sessionPayload, { expiresIn: '10m' });
-    const refreshToken = fastify.jwt.sign({ userId: user.id }, { expiresIn: '7d' });
+    const accessToken = fastify.jwt.sign(sessionPayload, { expiresIn: '7d' });
+    const refreshToken = fastify.jwt.sign({ userId: user.id }, { expiresIn: '30d' });
 
     return reply.send({
       success: true,
@@ -249,8 +249,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       role: UserRole.WARGA,
     };
 
-    const accessToken = fastify.jwt.sign(sessionPayload, { expiresIn: '10m' });
-    const refreshToken = fastify.jwt.sign({ userId: result.newUser.id }, { expiresIn: '7d' });
+    const accessToken = fastify.jwt.sign(sessionPayload, { expiresIn: '7d' });
+    const refreshToken = fastify.jwt.sign({ userId: result.newUser.id }, { expiresIn: '30d' });
 
     return reply.send({
       success: true,

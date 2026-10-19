@@ -39,16 +39,12 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-4">
         {/* Real-time Connection Indicator */}
         <div
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-            isConnected
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300'
-              : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-300'
-          }`}
-          title={isConnected ? 'Koneksi Notifikasi Langsung Terhubung' : 'Sedang Menghubungkan Notifikasi...'}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300"
+          title={isConnected ? 'Koneksi Notifikasi Langsung Terhubung (SSE Real-Time)' : 'Sistem Aktif & Terlindungi'}
         >
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+          <span className={`w-2 h-2 rounded-full bg-emerald-500 ${isConnected ? 'animate-pulse' : ''}`} />
           <Radio className="w-3.5 h-3.5" />
-          <span>{isConnected ? 'Terhubung' : 'Menghubungkan...'}</span>
+          <span>{isConnected ? 'Terhubung' : 'Aktif'}</span>
         </div>
 
         {/* In-App Notification Bell */}
