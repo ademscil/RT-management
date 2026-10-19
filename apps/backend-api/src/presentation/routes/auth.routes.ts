@@ -4,7 +4,6 @@ import crypto from 'node:crypto';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import {
   LoginRequestSchema,
-  ClaimInviteTokenSchema,
   VerifyRecoveryCodeSchema,
   ErrorCode,
   UserRole,
@@ -142,27 +141,27 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   /**
-   * POST /api/v1/auth/claim-invite (Zero-MDN Onboarding via QR Card)
+   * POST /api/v1/auth/verify-invite (Validate QR Token before setting password)
    */
-  fastify.post('/claim-invite', async (request, reply) => {
-    const parseResult = ClaimInviteTokenSchema.safeParse(request.body);
-    if (!parseResult.success) {
+  fastify.post('/verify-invite', async (request, reply) => {
+    const { token } = (request.body as { token?: string }) || {};
+    if (!token || typeof token !== 'string') {
       return reply.status(400).send({
         success: false,
-        error: {
-          code: ErrorCode.ERR_VALIDATION,
-          message: parseResult.error.errors[0].message,
-        },
+        error: { code: ErrorCode.ERR_VALIDATION, message: 'Token aktivasi QR wajib disertakan.' },
         timestamp: new Date().toISOString(),
       });
     }
 
-    const { token, username, password } = parseResult.data;
     const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
-
     const invite = await prisma.onboardingInvite.findUnique({
       where: { tokenHash },
-      include: { kk: { include: { warga: true } } },
+      include: {
+        rumah: true,
+        kk: {
+          include: { warga: true },
+        },
+      },
     });
 
     if (!invite || invite.isClaimed || (invite.expiresAt && invite.expiresAt < new Date())) {
@@ -176,17 +175,85 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Check if username already taken
-    const existingUser = await prisma.user.findUnique({ where: { username } });
-    if (existingUser) {
-      return reply.status(409).send({
+    const kepalaKeluarga =
+      invite.kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap ||
+      invite.kk.warga[0]?.namaLengkap ||
+      'Warga RT 05';
+
+    return reply.send({
+      success: true,
+      data: {
+        blokRumah: `${invite.rumah.kodeBlok} No. ${invite.rumah.nomorRumah}`,
+        nomorKkMasked: invite.kk.noKkMasked,
+        kepalaKeluarga,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  /**
+   * POST /api/v1/auth/claim-invite (Zero-MDN Onboarding via QR Card)
+   */
+  fastify.post('/claim-invite', async (request, reply) => {
+    const rawBody = request.body as any;
+    const token = rawBody?.token;
+    const password = rawBody?.password;
+    let username = rawBody?.username;
+
+    if (!token || !password) {
+      return reply.status(400).send({
         success: false,
         error: {
-          code: ErrorCode.ERR_CONFLICT,
-          message: 'Username sudah digunakan. Silakan pilih username lain.',
+          code: ErrorCode.ERR_VALIDATION,
+          message: 'Token aktivasi dan password wajib diisi.',
         },
         timestamp: new Date().toISOString(),
       });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(String(token).trim()).digest('hex');
+
+    const invite = await prisma.onboardingInvite.findUnique({
+      where: { tokenHash },
+      include: {
+        rumah: true,
+        kk: { include: { warga: true } },
+      },
+    });
+
+    if (!invite || invite.isClaimed || (invite.expiresAt && invite.expiresAt < new Date())) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: ErrorCode.ERR_INVALID_INVITE_TOKEN,
+          message: 'Token aktivasi QR tidak valid, sudah pernah diklaim, atau telah kedaluwarsa.',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Auto-generate clean username if omitted by resident
+    if (!username || typeof username !== 'string' || username.trim().length < 3) {
+      const cleanBlok = invite.rumah.kodeBlok.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cleanNo = invite.rumah.nomorRumah.toLowerCase().replace(/[^a-z0-9]/g, '');
+      username = `warga_${cleanBlok}_${cleanNo}`;
+      const existing = await prisma.user.findUnique({ where: { username } });
+      if (existing) {
+        username = `${username}_${Math.floor(100 + Math.random() * 900)}`;
+      }
+    } else {
+      username = username.trim();
+      const existingUser = await prisma.user.findUnique({ where: { username } });
+      if (existingUser) {
+        return reply.status(409).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_CONFLICT,
+            message: 'Username sudah digunakan. Silakan pilih username lain.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
 
     // Pick head of family or first resident in KK

@@ -11,7 +11,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
-import { Badge } from '@simrt/ui-kit';
 import { AppLogo } from '../AppLogo.js';
 
 export type AdminTab =

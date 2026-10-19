@@ -51,7 +51,7 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
       const res = await mobileApi.post<{
         blokRumah: string;
         nomorKkMasked: string;
-      }>('/onboarding/verify-invite', { token });
+      }>('/auth/verify-invite', { token });
 
       setHouseInfo(res);
       setStep(2);
@@ -86,7 +86,7 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
         accessToken: string;
         user: any;
         recoveryCodes: string[];
-      }>('/onboarding/claim-invite', {
+      }>('/auth/claim-invite', {
         token: tokenInput,
         password,
       });
