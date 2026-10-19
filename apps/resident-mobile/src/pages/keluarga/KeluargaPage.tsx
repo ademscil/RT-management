@@ -281,18 +281,6 @@ export const KeluargaPage: React.FC = () => {
               ))}
             </div>
           </div>
-
-          {/* Logout Section (Mobile only) */}
-          <div className="pt-4 md:hidden">
-            <Button
-              variant="destructive"
-              size="md"
-              className="w-full"
-              onClick={logout}
-            >
-              <LogOut className="w-4 h-4" /> Keluar dari Akun
-            </Button>
-          </div>
         </div>
       ) : (
         <Card>
@@ -301,6 +289,19 @@ export const KeluargaPage: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Direct Logout Action on Account Tab (Mobile only) */}
+      <div className="pt-2 md:hidden">
+        <Button
+          variant="destructive"
+          size="md"
+          className="w-full font-bold shadow-sm"
+          onClick={logout}
+          aria-label="Keluar dari Akun Warga"
+        >
+          <LogOut className="w-4 h-4 mr-2" /> Keluar dari Akun Warga
+        </Button>
+      </div>
 
       {/* PII Reveal Modal */}
       {selectedWargaId && (

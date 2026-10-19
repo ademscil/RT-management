@@ -82,8 +82,15 @@ export const SuratPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const targetJenisId = selectedJenisId || (jenisSuratList.length > 0 ? jenisSuratList[0].id : '');
+      if (!targetJenisId) {
+        notify.error({ title: 'Jenis Surat Belum Dipilih', description: 'Pilih jenis surat yang hendak diajukan.' });
+        setIsSubmitting(false);
+        return;
+      }
+
       await mobileApi.post('/surat/pengajuan', {
-        jenisSuratId: selectedJenisId,
+        jenisSuratId: targetJenisId,
         keperluan: keperluan.trim(),
         keteranganTambahan: keteranganTambahan.trim() || undefined,
       });

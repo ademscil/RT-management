@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, KeyRound, ArrowRight, QrCode, FileText, Wallet, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
 import { Button, notify } from '@simrt/ui-kit';
+import { AppLogo } from '../../components/AppLogo.js';
 
 interface LoginPageProps {
   onGoToActivation: () => void;
@@ -72,9 +73,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
 
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-teal-600 flex items-center justify-center font-black text-2xl text-white shadow-xl shadow-teal-900/50">
-                RT
-              </div>
+              <AppLogo size="lg" />
               <div>
                 <h1 className="text-2xl font-black text-white tracking-tight">SIM-RT WARGA ONLINE</h1>
                 <p className="text-xs text-teal-400 font-medium">Kel. Sukamaju, Kec. Cilodong, Kota Depok</p>
@@ -122,8 +121,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
         <div className="lg:col-span-5 w-full max-w-md mx-auto space-y-5">
           {/* Mobile-only Header */}
           <div className="lg:hidden text-center space-y-2 mb-2">
-            <div className="inline-flex w-14 h-14 rounded-2xl bg-teal-600 items-center justify-center font-black text-2xl text-white shadow-xl shadow-teal-900/50 mb-1">
-              RT
+            <div className="flex justify-center mb-1">
+              <AppLogo size="xl" />
             </div>
             <h1 className="text-xl font-black text-white tracking-tight">SIM-RT WARGA</h1>
             <p className="text-xs text-teal-400 font-medium">RT 05 / RW 02 Kel. Sukamaju, Cilodong</p>

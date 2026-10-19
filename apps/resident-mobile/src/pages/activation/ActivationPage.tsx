@@ -5,6 +5,7 @@ import { mobileApi } from '../../services/api.js';
 import { useAuth } from '../../context/auth-context.js';
 import { Button, notify } from '@simrt/ui-kit';
 import { QrScannerModal } from '../../components/QrScannerModal.js';
+import { AppLogo } from '../../components/AppLogo.js';
 
 interface ActivationPageProps {
   onBackToLogin: () => void;
@@ -151,8 +152,8 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
       <div className="w-full max-w-xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-2 text-center">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-teal-600 items-center justify-center text-white shadow-lg shadow-teal-900/50 mb-1">
-            <QrCode className="w-6 h-6" />
+          <div className="flex justify-center mb-1">
+            <AppLogo size="xl" />
           </div>
           <h1 className="text-xl font-black tracking-tight text-white">Aktivasi Mandiri Warga RT</h1>
           <p className="text-xs text-teal-400 font-medium">RT 05 / RW 02 Kel. Sukamaju, Cilodong</p>

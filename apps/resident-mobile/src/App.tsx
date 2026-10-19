@@ -8,6 +8,7 @@ import { SuratPage } from './pages/surat/SuratPage.js';
 import { IuranPage } from './pages/iuran/IuranPage.js';
 import { NotifikasiPage } from './pages/notifikasi/NotifikasiPage.js';
 import { BottomNavigation, TabType } from './components/BottomNavigation.js';
+import { AppLogo } from './components/AppLogo.js';
 import { AppToaster, OfflineModeBanner, useSSE } from '@simrt/ui-kit';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
@@ -83,16 +84,45 @@ const MainLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between">
       <OfflineModeBanner />
 
+      {/* Mobile Top Header with Brand Logo, Resident Identity, and Direct Logout */}
+      <header className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-xs">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AppLogo size="sm" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-black tracking-tight text-slate-900 dark:text-white truncate">
+                  SIM-RT 05
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-950/80 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 shrink-0">
+                  {user?.blokRumah || 'Warga'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                {user?.namaLengkap || user?.username}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs"
+            aria-label="Keluar dari Akun Warga"
+            title="Keluar dari Akun"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Keluar</span>
+          </button>
+        </div>
+      </header>
+
       {/* Responsive Desktop Navigation Header */}
       <header className="hidden md:block sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand Logo & Neighborhood Identity */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-400 p-0.5 shadow-md shadow-teal-900/20 shrink-0">
-              <div className="w-full h-full bg-teal-950 rounded-[10px] flex items-center justify-center font-black text-white text-sm">
-                RT
-              </div>
-            </div>
+            <AppLogo size="md" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-base font-black tracking-tight text-slate-900 dark:text-white whitespace-nowrap">

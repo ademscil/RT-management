@@ -198,7 +198,7 @@ export const IuranPage: React.FC = () => {
           ) : (
             bills.map((b) => {
               const isPaid = b.status === 'PAID';
-              const isPending = b.status === 'PENDING_VERIFIKASI';
+              const isPending = b.status === 'PENDING_VERIFIKASI' || (b.status as string) === 'PENDING_VERIFICATION';
               return (
                 <Card key={b.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <CardContent className="p-4 space-y-3">
