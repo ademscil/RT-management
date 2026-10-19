@@ -1,0 +1,431 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Rukun Tetangga Configuration
+model RukunTetanggaConfig {
+  id                    String   @id @default(uuid())
+  kodeRt                String   @default("05")
+  kodeRw                String   @default("02")
+  namaKelurahan         String   @default("Sukamaju")
+  namaKecamatan         String   @default("Cilodong")
+  namaKota              String   @default("Kota Depok")
+  kodePos               String   @default("16415")
+  ed25519PublicKey      String   @default("")
+  ed25519PrivateKeyEnc  String   @default("")
+  logoMinioKey          String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("rukun_tetangga_config")
+}
+
+// 2. Rumah / Kavling
+model RumahKavling {
+  id               String            @id @default(uuid())
+  kodeBlok         String            @unique
+  nomorRumah       String
+  alamat           String
+  gridX            Int               @default(0)
+  gridY            Int               @default(0)
+  statusHunian     String            @default("DIHUNI_PEMILIK") // DIHUNI_PEMILIK, DIHUNI_PENYEWA, KOSONG
+  hasVulnerability Boolean           @default(false)
+  kartuKeluarga    KartuKeluarga[]
+  tagihanIuran     TagihanIuran[]
+  onboardingInvites OnboardingInvite[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([statusHunian])
+  @@index([hasVulnerability])
+  @@map("rumah_kavling")
+}
+
+// 3. Kartu Keluarga (RLS Enabled)
+model KartuKeluarga {
+  id               String             @id @default(uuid())
+  rumahId          String
+  rumah            RumahKavling       @relation(fields: [rumahId], references: [id], onDelete: Cascade)
+  noKkEncrypted    String
+  noKkBlindIndex   String             @unique
+  noKkMasked       String
+  keyVersion       String             @default("v1")
+  statusDomisili   String             @default("TETAP")
+  statusVerifikasi String             @default("PENDING") // PENDING, VERIFIED, REVISION_REQUESTED, REJECTED
+  catatanRevisi    String?
+  warga            Warga[]
+  dokumenVault     DokumenVault[]
+  pengajuanSurat   PengajuanSurat[]
+  tagihanIuran     TagihanIuran[]
+  onboardingInvites OnboardingInvite[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([rumahId])
+  @@index([noKkBlindIndex])
+  @@index([statusVerifikasi])
+  @@map("kartu_keluarga")
+}
+
+// 4. Warga (RLS Enabled)
+model Warga {
+  id                  String             @id @default(uuid())
+  kkId                String
+  kk                  KartuKeluarga      @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  nikEncrypted        String
+  nikBlindIndex       String             @unique
+  nikMasked           String
+  keyVersion          String             @default("v1")
+  namaLengkap         String
+  tempatLahir         String
+  tanggalLahir        String
+  gender              String
+  golonganDarah       String             @default("TIDAK_TAHU")
+  agama               String
+  pendidikanTerakhir  String             @default("SMA/Sederajat")
+  pekerjaan           String             @default("Karyawan Swasta")
+  statusPerkawinan    String
+  hubunganKeluarga    String
+  statusKependudukan  String             @default("TETAP")
+  isLansia            Boolean            @default(false)
+  isDisabilitas       Boolean            @default(false)
+  isBalita            Boolean            @default(false)
+  isIbuHamil          Boolean            @default(false)
+  users               User?
+  dokumenVault        DokumenVault[]
+  pengajuanSurat      PengajuanSurat[]
+  mutasiLogs          MutasiWargaLog[]
+  peminjaman          PeminjamanInventaris[]
+  tiketAduan          TiketAduan[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([kkId])
+  @@index([nikBlindIndex])
+  @@index([golonganDarah])
+  @@index([isLansia])
+  @@index([isDisabilitas])
+  @@index([isBalita])
+  @@index([isIbuHamil])
+  @@map("warga")
+}
+
+// 5. Dokumen Vault (Encrypted DEK + Envelope Encryption - RLS Enabled)
+model DokumenVault {
+  id               String        @id @default(uuid())
+  pemilikWargaId   String
+  pemilikWarga     Warga         @relation(fields: [pemilikWargaId], references: [id], onDelete: Cascade)
+  kkId             String
+  kk               KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  jenisDokumen     String        // KTP, KK, BUKTI_DOMISILI, SURAT_NIKAH
+  minioKey         String
+  encryptedDek     String        // Encrypted with Master KEK
+  encryptionIv     String
+  authTag          String
+  keyVersion       String        @default("v1")
+  sha256Hash       String
+  statusVerifikasi String        @default("PENDING")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([pemilikWargaId])
+  @@index([kkId])
+  @@index([jenisDokumen])
+  @@map("dokumen_vault")
+}
+
+// 6. Mutasi Warga Logs
+model MutasiWargaLog {
+  id                 String   @id @default(uuid())
+  wargaId            String
+  warga              Warga    @relation(fields: [wargaId], references: [id], onDelete: Cascade)
+  jenisMutasi        String   // PINDAH_MASUK, PINDAH_KELUAR, KELAHIRAN, KEMATIAN
+  tanggal            String
+  dokumenPendukungId String?
+  keterangan         String?
+  dicatatOlehUserId  String
+  createdAt          DateTime @default(now())
+
+  @@index([wargaId])
+  @@index([jenisMutasi])
+  @@map("mutasi_warga_logs")
+}
+
+// 7. Users (Argon2id Hashed)
+model User {
+  id              String            @id @default(uuid())
+  wargaId         String            @unique
+  warga           Warga             @relation(fields: [wargaId], references: [id], onDelete: Cascade)
+  username        String            @unique
+  passwordHash    String
+  role            String            @default("WARGA") // KETUA_RT, SEKRETARIS, BENDAHARA, WARGA
+  isActive        Boolean           @default(true)
+  failedAttempts  Int               @default(0)
+  lockedUntil     DateTime?
+  lastActiveAt    DateTime?
+  recoveryCodes   RecoveryCode[]
+  notifications   InAppNotification[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([username])
+  @@index([role])
+  @@map("users")
+}
+
+// 8. Onboarding Invites (One-time QR Code Token)
+model OnboardingInvite {
+  id               String        @id @default(uuid())
+  kkId             String
+  kk               KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  rumahId          String
+  rumah            RumahKavling  @relation(fields: [rumahId], references: [id], onDelete: Cascade)
+  tokenHash        String        @unique
+  tokenMasked      String
+  expiresAt        DateTime
+  isClaimed        Boolean       @default(false)
+  claimedByUserId  String?
+  claimedAt        DateTime?
+  createdAt        DateTime      @default(now())
+
+  @@index([tokenHash])
+  @@index([isClaimed])
+  @@map("onboarding_invites")
+}
+
+// 9. Recovery Codes (Offline 8-Digit Backup)
+model RecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isUsed])
+  @@map("recovery_codes")
+}
+
+// 10. Jenis Surat Templates
+model JenisSuratTemplate {
+  id             String           @id @default(uuid())
+  kodeSurat      String           @unique
+  namaSurat      String
+  formatNomor    String           @default("{NO}/RT05-RW02/{BULAN}/{TAHUN}")
+  templateHtml   String           @default("")
+  syaratDokumen  String           @default("[]") // JSON string of required docs
+  pengajuanSurat PengajuanSurat[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("jenis_surat_templates")
+}
+
+// 11. Pengajuan Surat (RLS Enabled)
+model PengajuanSurat {
+  id                 String             @id @default(uuid())
+  nomorTiket         String             @unique
+  nomorSuratResmi    String?
+  pemohonWargaId     String
+  pemohonWarga       Warga              @relation(fields: [pemohonWargaId], references: [id], onDelete: Cascade)
+  kkId               String
+  kk                 KartuKeluarga      @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  jenisSuratId       String
+  jenisSurat         JenisSuratTemplate @relation(fields: [jenisSuratId], references: [id])
+  keperluan          String
+  status             String             @default("DRAFT") // DRAFT, SUBMITTED, VERIFIED_SEKRETARIS, SIGNED_KETUA_RT, REJECTED, CANCELLED
+  catatanRevisi      String?
+  verifiedByUserId   String?
+  signedByUserId     String?
+  ed25519SignatureHex String?
+  verificationHash   String?
+  pdfMinioKey        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([pemohonWargaId])
+  @@index([kkId])
+  @@index([status])
+  @@index([nomorTiket])
+  @@map("pengajuan_surat")
+}
+
+// 12. Pos Keuangan
+model PosKeuangan {
+  id            String               @id @default(uuid())
+  kodePosKas    String               @unique
+  namaPos       String
+  saldoBerjalan BigInt               @default(0)
+  kasLedger     KasLedgerImmutable[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@map("pos_keuangan")
+}
+
+// 13. Tagihan Iuran (RLS Enabled)
+model TagihanIuran {
+  id                 String        @id @default(uuid())
+  rumahId            String
+  rumah              RumahKavling  @relation(fields: [rumahId], references: [id], onDelete: Cascade)
+  kkId               String
+  kk                 KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  bulan              Int
+  tahun              Int
+  nominal            BigInt
+  status             String        @default("UNPAID") // UNPAID, PENDING_VERIFICATION, PAID, REJECTED
+  buktiBayarMinioKey String?
+  alasanPenolakan    String?
+  verifiedByUserId   String?
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([rumahId])
+  @@index([kkId])
+  @@index([status])
+  @@index([bulan, tahun])
+  @@map("tagihan_iuran")
+}
+
+// 14. Kas Ledger Immutable (Hash-Chained Anti-Tamper)
+model KasLedgerImmutable {
+  id                 String      @id @default(uuid())
+  posKeuanganId      String
+  posKeuangan        PosKeuangan @relation(fields: [posKeuanganId], references: [id])
+  tipe               String      // IN, OUT
+  nominal            BigInt
+  saldoSetelah       BigInt
+  deskripsi          String
+  buktiNotaMinioKey  String?
+  createdByUserId    String
+  approvedByUserId   String?
+  prevHash           String
+  rowHash            String
+  createdAt          DateTime    @default(now())
+
+  @@index([posKeuanganId])
+  @@index([rowHash])
+  @@index([createdAt])
+  @@map("kas_ledger_immutable")
+}
+
+// 15. Jadwal Ronda
+model JadwalRonda {
+  id              String   @id @default(uuid())
+  tanggal         String
+  shift           String   @default("Malam (22:00 - 04:00)")
+  keterangan      String?
+  pesertaWargaIds String   @default("[]") // JSON Array string of Warga UUIDs
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tanggal])
+  @@map("jadwal_ronda")
+}
+
+// 16. Inventaris & Peminjaman
+model InventarisRt {
+  id                String                 @id @default(uuid())
+  namaBarang        String
+  kodeBarang        String                 @unique
+  kategori          String                 @default("Umum")
+  jumlahTotal       Int
+  kondisiBaik       Int
+  lokasiPenyimpanan String                 @default("Pos RT")
+  peminjaman        PeminjamanInventaris[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@map("inventaris_rt")
+}
+
+model PeminjamanInventaris {
+  id                    String       @id @default(uuid())
+  inventarisId          String
+  inventaris            InventarisRt @relation(fields: [inventarisId], references: [id], onDelete: Cascade)
+  peminjamWargaId       String
+  peminjamWarga         Warga        @relation(fields: [peminjamWargaId], references: [id], onDelete: Cascade)
+  jumlah                Int
+  tanggalPinjam         String
+  tanggalRencanaKembali String
+  tanggalKembali        String?
+  status                String       @default("PENDING") // PENDING, APPROVED, REJECTED, RETURNED
+  keperluan             String
+  approvedByUserId      String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([inventarisId])
+  @@index([peminjamWargaId])
+  @@index([status])
+  @@map("peminjaman_inventaris")
+}
+
+// 17. Tiket Aduan Warga
+model TiketAduan {
+  id                String   @id @default(uuid())
+  pelaporWargaId    String
+  pelaporWarga      Warga    @relation(fields: [pelaporWargaId], references: [id], onDelete: Cascade)
+  kategori          String
+  judul             String
+  deskripsi         String
+  fotoMinioKey      String?
+  status            String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, REJECTED
+  tanggapanPengurus String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([pelaporWargaId])
+  @@index([status])
+  @@map("tiket_aduan_warga")
+}
+
+// 18. In-App Notifications & Security Audit Logs (Hash-Chained)
+model InAppNotification {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kategori    String    // SURAT, IURAN, RONDA, KEAMANAN, PENGUMUMAN
+  priority    String    @default("NORMAL") // LOW, NORMAL, HIGH, SECURITY
+  judul       String
+  pesan       String
+  actionLabel String?
+  deepLinkUrl String?
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("in_app_notifications")
+}
+
+model SecurityAuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String
+  actorRole    String
+  actionType   String   // LOGIN, REVEAL_PII, STREAM_KTP, SIGN_SURAT, VERIFY_IURAN, MUTASI
+  targetEntity String   // WARGA, KARTU_KELUARGA, DOKUMEN_VAULT, KAS_LEDGER
+  targetId     String
+  accessReason String?
+  ipAddress    String
+  userAgent    String
+  prevHash     String
+  rowHash      String
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([actionType])
+  @@index([rowHash])
+  @@index([createdAt])
+  @@map("security_audit_logs")
+}
+

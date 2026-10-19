@@ -12,7 +12,8 @@
     "MINIO_PORT",
     "MINIO_USE_SSL",
     "MINIO_ACCESS_KEY",
-    "MINIO_SECRET_KEY"
+    "MINIO_SECRET_KEY",
+    "VITE_API_URL"
   ],
   "tasks": {
     "build": {
