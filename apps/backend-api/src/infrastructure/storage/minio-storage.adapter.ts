@@ -8,7 +8,7 @@ import {
 } from '@aws-sdk/client-s3';
 
 export class MinioStorageAdapter {
-  private readonly client: S3Client;
+  private readonly client: any;
 
   constructor() {
     const endpoint = process.env.MINIO_ENDPOINT || 'localhost';

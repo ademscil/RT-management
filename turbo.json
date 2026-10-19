@@ -1,5 +1,19 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "NODE_ENV",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "KEK_SECRET_V1",
+    "BLIND_INDEX_PEPPER",
+    "PORT",
+    "MINIO_ENDPOINT",
+    "MINIO_PORT",
+    "MINIO_USE_SSL",
+    "MINIO_ACCESS_KEY",
+    "MINIO_SECRET_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
