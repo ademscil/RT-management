@@ -1,9 +1,12 @@
-import { PrismaClient } from '@prisma/client';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { PrismaClient } = require('@prisma/client');
 
 export class PrismaService {
-  private static instance: PrismaClient;
+  private static instance: any;
 
-  public static getInstance(): PrismaClient {
+  public static getInstance(): any {
     if (!PrismaService.instance) {
       PrismaService.instance = new PrismaClient({
         log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
@@ -17,12 +20,12 @@ export class PrismaService {
    */
   public static async withRlsContext<T>(
     context: { userId?: string; role?: string; kkId?: string },
-    fn: (tx: PrismaClient) => Promise<T>
+    fn: (tx: any) => Promise<T>
   ): Promise<T> {
     const prisma = PrismaService.getInstance();
 
     // Use Prisma interactive transaction to scope SET LOCAL variables
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       const userId = context.userId || '';
       const role = context.role || 'WARGA';
       const kkId = context.kkId || '';
@@ -33,7 +36,7 @@ export class PrismaService {
         SET LOCAL app.current_kk_id = '${kkId}';
       `);
 
-      return await fn(tx as unknown as PrismaClient);
+      return await fn(tx);
     });
   }
 }
