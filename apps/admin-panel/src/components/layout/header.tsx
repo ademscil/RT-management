@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             Rukun Tetangga 05 / RW 02
             <Badge variant="success" className="text-[10px] py-0">
-              Verified Civil DB
+              Data Resmi RT
             </Badge>
           </h2>
           <p className="text-xs text-slate-500">Kel. Sukamaju, Kec. Cilodong, Kota Depok</p>
@@ -37,18 +37,18 @@ export const Header: React.FC = () => {
 
       {/* Right Controls */}
       <div className="flex items-center gap-4">
-        {/* Real-time SSE Connection Indicator */}
+        {/* Real-time Connection Indicator */}
         <div
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
             isConnected
               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300'
               : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-300'
           }`}
-          title={isConnected ? 'Koneksi Server-Sent Events Real-Time Terhubung' : 'Mencoba Menghubungkan SSE...'}
+          title={isConnected ? 'Koneksi Notifikasi Langsung Terhubung' : 'Sedang Menghubungkan Notifikasi...'}
         >
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
           <Radio className="w-3.5 h-3.5" />
-          <span>{isConnected ? 'SSE LIVE' : 'CONNECTING'}</span>
+          <span>{isConnected ? 'Terhubung' : 'Menghubungkan...'}</span>
         </div>
 
         {/* In-App Notification Bell */}
@@ -56,7 +56,7 @@ export const Header: React.FC = () => {
           <button
             onClick={toggleInbox}
             className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Kotak Masuk Notifikasi Real-Time"
+            title="Kotak Masuk Notifikasi Pengurus"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
@@ -83,7 +83,7 @@ export const Header: React.FC = () => {
                     <span className="text-[10px] text-slate-400">Baru saja</span>
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300">
-                    Koneksi SSE Real-Time aktif. Seluruh pengajuan surat dan iuran akan masuk secara instan.
+                    Koneksi data real-time aktif. Seluruh pengajuan surat dan konfirmasi iuran dari warga akan langsung masuk.
                   </p>
                 </div>
               </div>

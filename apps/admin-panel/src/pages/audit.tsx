@@ -96,15 +96,15 @@ export const AuditPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
             <ShieldCheck className="w-6 h-6 text-teal-700" />
-            Security Audit & Anomaly Detection Console
+            Catatan Aktivitas & Riwayat RT 05 / RW 02
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Log akses PII append-only yang dilindungi rantai kriptografis SHA-256 (Anti-Tamper Audit Trail)
+            Riwayat aktivitas pengurus yang tersimpan secara aman & anti-manipulasi untuk transparansi warga
           </p>
         </div>
 
-        <Button variant="pii" size="md" onClick={handleVerifyChain} isLoading={isVerifying}>
-          <ShieldCheck className="w-4 h-4" /> Verifikasi Integritas Rantai Audit
+        <Button variant="primary" size="md" onClick={handleVerifyChain} isLoading={isVerifying} className="text-xs font-bold">
+          <ShieldCheck className="w-4 h-4" /> Uji Keabsahan Catatan
         </Button>
       </div>
 
@@ -126,16 +126,16 @@ export const AuditPage: React.FC = () => {
             <div>
               <strong className="text-sm block">
                 {auditResult.isChainValid
-                  ? 'Audit Log Integritas Matematis: Rantai Sah'
-                  : 'Peringatan: Integritas Rantai Log Terputus!'}
+                  ? 'Catatan Sah 100%: Tidak Ada Catatan yang Diubah atau Dihapus'
+                  : 'Peringatan: Ada Riwayat yang Termodifikasi!'}
               </strong>
               <p className="font-mono text-[11px] opacity-80 mt-0.5">
-                Total Baris: {auditResult.totalRecordsChecked} | First Hash: {auditResult.firstHash.substring(0, 16)}... | Last Hash: {auditResult.lastHash.substring(0, 16)}...
+                Total Baris: {auditResult.totalRecordsChecked} entri | Hash Pertama: {auditResult.firstHash.substring(0, 16)}... | Hash Terakhir: {auditResult.lastHash.substring(0, 16)}...
               </p>
             </div>
           </div>
           <Badge variant={auditResult.isChainValid ? 'success' : 'destructive'} className="font-mono">
-            {auditResult.isChainValid ? 'CHAIN UNTOUCHED' : 'TAMPERED'}
+            {auditResult.isChainValid ? 'TERVERIFIKASI SAH' : 'TERMODIFIKASI'}
           </Badge>
         </div>
       )}

@@ -54,8 +54,8 @@ export const LoginPage: React.FC = () => {
         {/* Login Card */}
         <div className="p-7 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl space-y-5">
           <div className="space-y-1">
-            <h2 className="text-base font-bold text-slate-100">Portal Akses Pengurus RT</h2>
-            <p className="text-xs text-slate-400">Autentikasi terenkripsi Argon2id & Proteksi Kriptografi PII</p>
+            <h2 className="text-base font-bold text-slate-100">Portal Masuk Pengurus RT</h2>
+            <p className="text-xs text-slate-400">Sistem informasi rukun tetangga terenkripsi & terlindungi</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

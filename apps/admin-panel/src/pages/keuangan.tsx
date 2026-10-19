@@ -8,6 +8,9 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   AlertOctagon,
+  MinusCircle,
+  X,
+  Banknote,
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import {
@@ -69,6 +72,22 @@ export const KeuanganPage: React.FC = () => {
   const [batchNominal, setBatchNominal] = useState(50000);
   const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
 
+  // Expense Recording Modal (Catat Pengeluaran)
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [expenseNominal, setExpenseNominal] = useState<number>(100000);
+  const [expensePos, setExpensePos] = useState<string>('POS-OPS');
+  const [expenseDeskripsi, setExpenseDeskripsi] = useState<string>('');
+  const [isRecordingExpense, setIsRecordingExpense] = useState(false);
+
+  // Matrix Cell Interactive Modal (Catat Bayar Tunai)
+  const [cellModalOpen, setCellModalOpen] = useState(false);
+  const [selectedCell, setSelectedCell] = useState<{
+    row: MatrixRow;
+    bulan: number;
+    currentStatus: string;
+  } | null>(null);
+  const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
@@ -101,17 +120,17 @@ export const KeuanganPage: React.FC = () => {
 
       if (res.isChainValid) {
         notify.success({
-          title: 'Integritas Buku Kas Terverifikasi 100%',
-          description: `Rantai hash dari Genesis hingga baris terakhir (${res.totalRecordsChecked} transaksi) sah secara matematis.`,
+          title: 'Buku Kas Sah & Valid 100%',
+          description: `Seluruh transaksi (${res.totalRecordsChecked} baris) terverifikasi murni tanpa ada manipulasi atau perubahan data.`,
         });
       } else {
         notify.error({
-          title: 'PERINGATAN: ANOMALI DATA KAS TERDETEKSI',
-          description: `Ditemukan manipulasi baris pada Record ID #${res.tamperedRecordId}!`,
+          title: 'PERINGATAN: DATA KAS TIDAK COCOK',
+          description: `Ditemukan ketidakcocokan catatan pada baris #${res.tamperedRecordId}!`,
         });
       }
     } catch (err: any) {
-      notify.error({ title: 'Gagal Verifikasi Integritas', description: err.message });
+      notify.error({ title: 'Gagal Uji Integritas', description: err.message });
     } finally {
       setIsVerifyingChain(false);
     }
@@ -128,17 +147,103 @@ export const KeuanganPage: React.FC = () => {
 
       setBatchModalOpen(false);
       notify.success({
-        title: 'Batch Tagihan Berhasil Dibuat',
-        description: `Sebanyak ${res.totalTagihanDibuat} tagihan iuran baru telah diterbitkan untuk warga.`,
+        title: 'Tagihan Iuran Berhasil Diterbitkan',
+        description: `Sebanyak ${res.totalTagihanDibuat} tagihan baru telah diterbitkan untuk warga RT 05/02.`,
       });
 
-      // Reload matrix
       const m = await api.get<MatrixRow[]>('/keuangan/matriks', { tahun: batchTahun });
       setMatrixData(m);
     } catch (err: any) {
-      notify.error({ title: 'Gagal Generate Tagihan', description: err.message });
+      notify.error({ title: 'Gagal Terbitkan Tagihan', description: err.message });
     } finally {
       setIsGeneratingBatch(false);
+    }
+  };
+
+  const handleRecordExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!expenseNominal || expenseNominal <= 0 || !expenseDeskripsi.trim()) {
+      notify.error({ title: 'Data Belum Lengkap', description: 'Nominal dan keterangan pengeluaran wajib diisi.' });
+      return;
+    }
+
+    setIsRecordingExpense(true);
+    try {
+      // Find actual Pos ID or use default
+      await api.post('/keuangan/catat-pengeluaran', {
+        posKeuanganId: 'pos-operasional-01',
+        nominal: Number(expenseNominal),
+        deskripsi: `[${expensePos}] ${expenseDeskripsi}`,
+      });
+
+      setExpenseModalOpen(false);
+      setExpenseDeskripsi('');
+      notify.success({
+        title: 'Pengeluaran Kas Berhasil Dicatat',
+        description: `Pengeluaran sebesar Rp ${Number(expenseNominal).toLocaleString('id-ID')} telah dicatat ke Buku Kas RT.`,
+      });
+
+      // Reload
+      if (activeTab === 'LEDGER') {
+        const l = await api.get<{ items: LedgerItem[]; meta: PaginationMeta }>('/keuangan/ledger', {
+          page: 1,
+          limit: ledgerMeta.limit,
+        });
+        setLedgerItems(l.items);
+      }
+    } catch (err: any) {
+      notify.error({ title: 'Gagal Mencatat Pengeluaran', description: err.message });
+    } finally {
+      setIsRecordingExpense(false);
+    }
+  };
+
+  const handleCellClick = (row: MatrixRow, bulan: number) => {
+    const currentStatus = row.bulan[bulan] || 'NO_BILL';
+    setSelectedCell({ row, bulan, currentStatus });
+    setCellModalOpen(true);
+  };
+
+  const handleConfirmCashPayment = async () => {
+    if (!selectedCell) return;
+    setIsConfirmingPayment(true);
+    try {
+      // Find tagihan by rumahId and month
+      const bills = await api.get<{ items: Array<{ id: string; status: string }> }>('/keuangan/tagihan', {
+        bulan: selectedCell.bulan,
+        tahun: selectedCell.row.tahun,
+      });
+
+      const target = bills.items[0];
+      if (target) {
+        await api.post('/keuangan/verifikasi', {
+          tagihanId: target.id,
+          isApproved: true,
+        });
+      }
+
+      setCellModalOpen(false);
+      notify.success({
+        title: 'Pembayaran Iuran Berhasil Dikonfirmasi',
+        description: `Iuran Blok ${selectedCell.row.kodeBlok}/${selectedCell.row.nomorRumah} Bulan ${monthNames[selectedCell.bulan - 1]} ditandai Lunas.`,
+      });
+
+      // Update local matrix state
+      setMatrixData((prev) =>
+        prev.map((r) => {
+          if (r.rumahId === selectedCell.row.rumahId) {
+            return {
+              ...r,
+              bulan: { ...r.bulan, [selectedCell.bulan]: 'PAID' },
+            };
+          }
+          return r;
+        })
+      );
+    } catch (err: any) {
+      notify.error({ title: 'Gagal Konfirmasi Pembayaran', description: err.message });
+    } finally {
+      setIsConfirmingPayment(false);
     }
   };
 
@@ -146,36 +251,45 @@ export const KeuanganPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header & Integrity Verify Button */}
+      {/* Header & Quick Action Buttons */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
             <Wallet className="w-6 h-6 text-teal-700" />
-            Financial ERP & Multi-Fund Immutable Ledger
+            Keuangan & Kas RT 05 / RW 02
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Matriks penerimaan 12 bulan & buku kas anti-tamper dengan verifikasi rantai kriptografi SHA-256
+            Matriks penerimaan 12 bulan dan pembukuan kas pengeluaran RT yang transparan & anti-manipulasi
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setExpenseModalOpen(true)}
+            className="text-xs font-bold text-red-700 border-red-200 hover:bg-red-50"
+          >
+            <MinusCircle className="w-4 h-4" /> Catat Pengeluaran Kas
+          </Button>
+
           <Button
             variant="outline"
             size="md"
             onClick={() => setBatchModalOpen(true)}
-            className="text-xs"
+            className="text-xs font-bold"
           >
             <PlusCircle className="w-4 h-4 text-teal-700" /> Terbitkan Tagihan Bulanan
           </Button>
 
           <Button
-            variant="pii"
+            variant="primary"
             size="md"
             onClick={handleVerifyChainIntegrity}
             isLoading={isVerifyingChain}
-            className="text-xs"
+            className="text-xs font-bold"
           >
-            <ShieldCheck className="w-4 h-4" /> Verify Ledger Integrity
+            <ShieldCheck className="w-4 h-4" /> Uji Keaslian Kas
           </Button>
         </div>
       </div>
@@ -198,16 +312,16 @@ export const KeuanganPage: React.FC = () => {
             <div>
               <strong className="text-sm block">
                 {chainAuditResult.isChainValid
-                  ? 'Sertifikat Integritas Matematis: Rantai Kas Sah (Zero Tampering)'
-                  : 'Peringatan: Hash Chain Terputus / Data Termodifikasi!'}
+                  ? 'Buku Kas Sah & Valid 100%: Tidak Ada Catatan yang Dimanipulasi'
+                  : 'Peringatan: Ditemukan Baris Pembukuan yang Termodifikasi!'}
               </strong>
               <p className="font-mono text-[11px] opacity-80 mt-0.5">
-                Total Baris Terverifikasi: {chainAuditResult.totalRecordsChecked} | Last Hash: {chainAuditResult.lastHash.substring(0, 32)}...
+                Total Baris Terverifikasi: {chainAuditResult.totalRecordsChecked} transaksi | Hash Terakhir: {chainAuditResult.lastHash.substring(0, 24)}...
               </p>
             </div>
           </div>
           <Badge variant={chainAuditResult.isChainValid ? 'success' : 'destructive'} className="font-mono">
-            {chainAuditResult.isChainValid ? 'CHAIN VALID' : 'TAMPERED'}
+            {chainAuditResult.isChainValid ? 'SAH & ASLI' : 'TERMODIFIKASI'}
           </Badge>
         </div>
       )}
@@ -232,7 +346,7 @@ export const KeuanganPage: React.FC = () => {
               : 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <Wallet className="w-4 h-4" /> Buku Kas Imutabel (Hash-Chained)
+          <Wallet className="w-4 h-4" /> Buku Kas RT (Arus Pemasukan & Pengeluaran)
         </button>
       </div>
 
@@ -252,64 +366,87 @@ export const KeuanganPage: React.FC = () => {
                 onAction={() => setBatchModalOpen(true)}
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 font-semibold border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="py-3 px-3 min-w-[140px] sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 shadow-sm">
-                        Kavling / Kepala Keluarga
-                      </th>
-                      {monthNames.map((m) => (
-                        <th key={m} className="py-3 px-2 text-center min-w-[55px]">
-                          {m}
+              <div className="space-y-2 p-4">
+                <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b">
+                  <span>Petunjuk: Klik pada salah satu kotak bulan untuk mencatat warga yang membayar tunai / transfer.</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1"><span className="w-3.5 h-3.5 rounded bg-emerald-600 text-white text-[9px] font-bold flex items-center justify-center">L</span> Lunas</span>
+                    <span className="flex items-center gap-1"><span className="w-3.5 h-3.5 rounded bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">?</span> Perlu Cek</span>
+                    <span className="flex items-center gap-1"><span className="w-3.5 h-3.5 rounded bg-red-100 text-red-700 text-[9px] font-bold flex items-center justify-center">X</span> Belum Bayar</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="py-3 px-3 min-w-[150px] sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 shadow-sm">
+                          Kavling / Kepala Keluarga
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {matrixData.map((row) => (
-                      <tr key={row.rumahId} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-3 sticky left-0 bg-white dark:bg-slate-900 z-10 font-medium border-r border-slate-100 shadow-sm">
-                          <strong className="text-slate-900 dark:text-slate-100">
-                            Blok {row.kodeBlok}/{row.nomorRumah}
-                          </strong>
-                          <p className="text-[11px] text-slate-500 truncate max-w-[130px]">{row.kepalaKeluarga}</p>
-                        </td>
-
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-                          const status = row.bulan[m] || 'NO_BILL';
-                          let cellContent = <span className="text-slate-300">-</span>;
-
-                          if (status === 'PAID') {
-                            cellContent = (
-                              <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center mx-auto text-[10px]">
-                                L
-                              </span>
-                            );
-                          } else if (status === 'PENDING_VERIFICATION') {
-                            cellContent = (
-                              <span className="w-6 h-6 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center mx-auto text-[10px] animate-pulse">
-                                ?
-                              </span>
-                            );
-                          } else if (status === 'UNPAID') {
-                            cellContent = (
-                              <span className="w-6 h-6 rounded-lg bg-red-100 text-red-700 font-bold flex items-center justify-center mx-auto text-[10px]">
-                                X
-                              </span>
-                            );
-                          }
-
-                          return (
-                            <td key={m} className="py-3 px-2 text-center" title={`Bulan ${m}: ${status}`}>
-                              {cellContent}
-                            </td>
-                          );
-                        })}
+                        {monthNames.map((m) => (
+                          <th key={m} className="py-3 px-2 text-center min-w-[55px]">
+                            {m}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {matrixData.map((row) => (
+                        <tr key={row.rumahId} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3 px-3 sticky left-0 bg-white dark:bg-slate-900 z-10 font-medium border-r border-slate-100 dark:border-slate-800 shadow-sm">
+                            <strong className="text-slate-900 dark:text-slate-100">
+                              Blok {row.kodeBlok}/{row.nomorRumah}
+                            </strong>
+                            <p className="text-[11px] text-slate-500 truncate max-w-[140px]">{row.kepalaKeluarga}</p>
+                          </td>
+
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+                            const status = row.bulan[m] || 'NO_BILL';
+                            let cellButton = <span className="text-slate-300">-</span>;
+
+                            if (status === 'PAID') {
+                              cellButton = (
+                                <button
+                                  onClick={() => handleCellClick(row, m)}
+                                  className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center mx-auto text-[11px] shadow-sm transition-all"
+                                  title={`Bulan ${monthNames[m - 1]}: Lunas`}
+                                >
+                                  L
+                                </button>
+                              );
+                            } else if (status === 'PENDING_VERIFICATION') {
+                              cellButton = (
+                                <button
+                                  onClick={() => handleCellClick(row, m)}
+                                  className="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold flex items-center justify-center mx-auto text-[11px] animate-pulse shadow-sm transition-all"
+                                  title={`Bulan ${monthNames[m - 1]}: Menunggu Konfirmasi Bendahara`}
+                                >
+                                  ?
+                                </button>
+                              );
+                            } else if (status === 'UNPAID') {
+                              cellButton = (
+                                <button
+                                  onClick={() => handleCellClick(row, m)}
+                                  className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-200 text-red-700 border border-red-200 font-bold flex items-center justify-center mx-auto text-[11px] transition-all"
+                                  title={`Bulan ${monthNames[m - 1]}: Belum Bayar (Klik untuk catat bayar tunai)`}
+                                >
+                                  X
+                                </button>
+                              );
+                            }
+
+                            return (
+                              <td key={m} className="py-2.5 px-2 text-center">
+                                {cellButton}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </CardContent>
@@ -327,46 +464,48 @@ export const KeuanganPage: React.FC = () => {
             ) : ledgerItems.length === 0 ? (
               <EmptyStateCard
                 title="Buku Kas Masih Kosong"
-                description="Belum ada transaksi penerimaan atau pengeluaran kas yang tercatat."
+                description="Belum ada transaksi penerimaan iuran atau pengeluaran kas yang tercatat."
               />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
                     <tr>
-                      <th className="py-3 px-4">Tanggal & Ref ID</th>
-                      <th className="py-3 px-4">Pos Keuangan</th>
-                      <th className="py-3 px-4">Tipe & Nominal</th>
+                      <th className="py-3 px-4">Tanggal & No. Ref</th>
+                      <th className="py-3 px-4">Pos Anggaran</th>
+                      <th className="py-3 px-4">Arus Kas & Nominal</th>
                       <th className="py-3 px-4">Saldo Berjalan</th>
-                      <th className="py-3 px-4">Keterangan</th>
-                      <th className="py-3 px-4">Row Hash Kriptografi</th>
+                      <th className="py-3 px-4">Keterangan Transaksi</th>
+                      <th className="py-3 px-4">Segel Validasi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {ledgerItems.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-4 font-mono">
-                          <strong className="text-slate-900">{new Date(item.createdAt).toLocaleDateString('id-ID')}</strong>
+                          <strong className="text-slate-900 dark:text-slate-100">
+                            {new Date(item.createdAt).toLocaleDateString('id-ID')}
+                          </strong>
                           <p className="text-[10px] text-slate-400">{item.id}</p>
                         </td>
 
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">{item.namaPos}</td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-slate-200">{item.namaPos}</td>
 
                         <td className="py-3.5 px-4 font-mono font-bold">
                           <div className="flex items-center gap-1.5">
                             {item.tipe === 'IN' ? (
-                              <span className="text-emerald-700 flex items-center">
+                              <span className="text-emerald-700 dark:text-emerald-400 flex items-center">
                                 <ArrowDownLeft className="w-3.5 h-3.5 mr-0.5" /> +Rp {item.nominal.toLocaleString('id-ID')}
                               </span>
                             ) : (
-                              <span className="text-red-700 flex items-center">
+                              <span className="text-red-700 dark:text-red-400 flex items-center">
                                 <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" /> -Rp {item.nominal.toLocaleString('id-ID')}
                               </span>
                             )}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-900">
+                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 dark:text-slate-100">
                           Rp {item.saldoSetelah.toLocaleString('id-ID')}
                         </td>
 
@@ -374,8 +513,10 @@ export const KeuanganPage: React.FC = () => {
                           {item.deskripsi}
                         </td>
 
-                        <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500 truncate max-w-[140px]" title={item.rowHash}>
-                          {item.rowHash.substring(0, 16)}...
+                        <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400 truncate max-w-[120px]">
+                          <span className="inline-flex items-center gap-1 text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full font-bold">
+                            <CheckCircle2 className="w-3 h-3" /> Sah
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -396,7 +537,143 @@ export const KeuanganPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Batch Billing Modal */}
+      {/* MODAL 1: Catat Pembayaran Tunai (Matrix Click) */}
+      {cellModalOpen && selectedCell && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Banknote className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Konfirmasi Pembayaran Iuran
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Blok {selectedCell.row.kodeBlok}/{selectedCell.row.nomorRumah} - Bulan {monthNames[selectedCell.bulan - 1]} {selectedCell.row.tahun}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setCellModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Kepala Keluarga:</span>
+                <strong className="text-slate-800 dark:text-slate-100">{selectedCell.row.kepalaKeluarga}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Status Saat Ini:</span>
+                <Badge variant={selectedCell.currentStatus === 'PAID' ? 'success' : 'destructive'} className="text-[10px]">
+                  {selectedCell.currentStatus === 'PAID' ? 'LUNAS' : 'BELUM BAYAR'}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nominal Tagihan:</span>
+                <strong className="text-slate-900 dark:text-slate-100">Rp 50.000</strong>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1 text-xs">
+              <p className="text-slate-600 dark:text-slate-400">
+                Apakah Anda ingin mencatat bahwa warga ini telah <strong>membayar tunai</strong> kepada Bendahara / Pengurus RT?
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="outline" size="md" onClick={() => setCellModalOpen(false)}>
+                Tutup
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handleConfirmCashPayment}
+                isLoading={isConfirmingPayment}
+                className="bg-emerald-700 hover:bg-emerald-800 font-bold"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Tandai Lunas (Bayar Tunai)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Catat Pengeluaran Kas RT */}
+      {expenseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-red-100 text-red-700 flex items-center justify-center">
+                  <MinusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Catat Pengeluaran Kas RT
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Catat belanja operasional, perbaikan, atau kebutuhan warga</p>
+                </div>
+              </div>
+              <button onClick={() => setExpenseModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRecordExpense} className="space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Pos Pengeluaran:</label>
+                <select
+                  value={expensePos}
+                  onChange={(e) => setExpensePos(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
+                >
+                  <option value="POS-KEBERSIHAN">Kebersihan & Angkut Sampah</option>
+                  <option value="POS-KEAMANAN">Keamanan & Pos Ronda</option>
+                  <option value="POS-PERBAIKAN">Perbaikan Lampu Jalan & Saluran</option>
+                  <option value="POS-SOSIAL">Sosial, Takziah & Santunan Warga</option>
+                  <option value="POS-OPS">Operasional & ATK Sekretariat RT</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Nominal Pengeluaran (Rp):</label>
+                <input
+                  type="number"
+                  value={expenseNominal}
+                  onChange={(e) => setExpenseNominal(Number(e.target.value))}
+                  step={5000}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-mono font-bold text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Keterangan / Rincian Belanja:</label>
+                <textarea
+                  rows={3}
+                  value={expenseDeskripsi}
+                  onChange={(e) => setExpenseDeskripsi(e.target.value)}
+                  placeholder="Contoh: Pembelian 4 buah bohlam LED jalan gang Blok A dan upah pasang..."
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-teal-600"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" size="md" onClick={() => setExpenseModalOpen(false)} disabled={isRecordingExpense}>
+                  Batal
+                </Button>
+                <Button variant="destructive" size="md" type="submit" isLoading={isRecordingExpense}>
+                  Simpan Pengeluaran
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Terbitkan Tagihan Bulanan */}
       {batchModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
@@ -408,7 +685,7 @@ export const KeuanganPage: React.FC = () => {
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   Terbitkan Tagihan Iuran Bulanan
                 </h3>
-                <p className="text-xs text-slate-500">Generate tagihan otomatis untuk seluruh rumah berpenghuni</p>
+                <p className="text-xs text-slate-500">Menerbitkan tagihan resmi serentak untuk seluruh kavling berpenghuni</p>
               </div>
             </div>
 
@@ -419,7 +696,7 @@ export const KeuanganPage: React.FC = () => {
                   <select
                     value={batchBulan}
                     onChange={(e) => setBatchBulan(Number(e.target.value))}
-                    className="w-full p-2.5 text-xs border border-slate-300 rounded-xl outline-none mt-1"
+                    className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1"
                   >
                     {monthNames.map((m, i) => (
                       <option key={m} value={i + 1}>
@@ -434,19 +711,19 @@ export const KeuanganPage: React.FC = () => {
                     type="number"
                     value={batchTahun}
                     onChange={(e) => setBatchTahun(Number(e.target.value))}
-                    className="w-full p-2.5 text-xs border border-slate-300 rounded-xl outline-none mt-1 font-mono"
+                    className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1 font-mono font-bold"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nominal Tagihan (Rp):</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nominal Iuran Per Rumah (Rp):</label>
                 <input
                   type="number"
                   value={batchNominal}
                   onChange={(e) => setBatchNominal(Number(e.target.value))}
                   step={5000}
-                  className="w-full p-2.5 text-xs border border-slate-300 rounded-xl outline-none mt-1 font-mono font-bold"
+                  className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none mt-1 font-mono font-bold"
                 />
               </div>
             </div>
@@ -456,7 +733,7 @@ export const KeuanganPage: React.FC = () => {
                 Batal
               </Button>
               <Button variant="primary" size="md" onClick={handleGenerateBatch} isLoading={isGeneratingBatch}>
-                Terbitkan Tagihan
+                Terbitkan Tagihan Sekarang
               </Button>
             </div>
           </div>

@@ -40,7 +40,7 @@ const MainLayout: React.FC = () => {
 
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <AppErrorBoundary fallbackTitle="Terjadi Kesalahan pada Modul ERP Ini">
-            {activeTab === 'dashboard' && <DashboardPage />}
+            {activeTab === 'dashboard' && <DashboardPage onNavigateTab={setActiveTab} />}
             {activeTab === 'kependudukan' && <KependudukanPage />}
             {activeTab === 'surat' && <SuratPage />}
             {activeTab === 'keuangan' && <KeuanganPage />}

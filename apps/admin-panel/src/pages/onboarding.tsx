@@ -121,21 +121,31 @@ export const OnboardingPage: React.FC = () => {
       </div>
 
       {/* Info Guide Card */}
-      <Card className="border-teal-200 bg-teal-50/40">
-        <CardContent className="p-5 flex items-start gap-4">
+      <Card className="border-teal-200 bg-teal-50/40 dark:bg-slate-900 dark:border-slate-800">
+        <CardContent className="p-5 flex flex-col md:flex-row items-start gap-5">
           <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0">
             <Shield className="w-5 h-5" />
           </div>
-          <div className="space-y-1 text-xs text-slate-700">
-            <strong className="text-sm font-bold text-teal-950 block">Alur Onboarding Mandiri Warga RT 05/02</strong>
-            <p>
-              1. Pengurus mencetak lembar A4 kartu aktivasi QR dan membagikannya ke kepala keluarga baru.
-            </p>
-            <p>
-              2. Warga membuka aplikasi <strong>Resident Mobile</strong> di Android, memindai QR code, dan membuat kata sandi akunnya.
-            </p>
-            <p>
-              3. Aplikasi secara otomatis memberikan <strong>8 Kode Pemulihan Offline</strong> yang disimpan oleh warga.
+          <div className="space-y-2 text-xs text-slate-700 dark:text-slate-300 flex-1">
+            <strong className="text-sm font-bold text-teal-950 dark:text-teal-300 block">
+              2 Cara Mudah Warga Mengakses SIM-RT (Pilih Salah Satu):
+            </strong>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-100 dark:border-slate-700 space-y-1">
+                <span className="font-bold text-teal-800 dark:text-teal-300 block">Cara 1: Lewat Browser Web (Tanpa Install)</span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Warga cukup membuka tautan <strong>Portal Warga</strong> di browser HP (Chrome/Safari) atau laptop, lalu scan QR atau ketik token kartu aktivasi.
+                </p>
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-100 dark:border-slate-700 space-y-1">
+                <span className="font-bold text-teal-800 dark:text-teal-300 block">Cara 2: Pasang Aplikasi Android (.APK)</span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Warga memasang aplikasi <strong>SIM-RT Warga</strong> di Android, arahkan kamera ke kartu QR fisik yang dibagikan Pak RT, dan buat kata sandi.
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 pt-1 italic">
+              *Setelah aktivasi berhasil, warga langsung mendapatkan 8 Kode Pemulihan Cadangan untuk login jika berganti perangkat.
             </p>
           </div>
         </CardContent>

@@ -43,13 +43,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   };
 
   const navItems: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
-    { id: 'dashboard', label: 'Command Center & Peta', icon: <LayoutDashboard className="w-5 h-5 shrink-0" /> },
-    { id: 'kependudukan', label: 'Data Kependudukan & KK', icon: <Users className="w-5 h-5 shrink-0" /> },
-    { id: 'surat', label: 'Maker-Checker E-Surat', icon: <FileText className="w-5 h-5 shrink-0" /> },
-    { id: 'keuangan', label: 'Buku Kas & Matriks Iuran', icon: <Wallet className="w-5 h-5 shrink-0" /> },
-    { id: 'onboarding', label: 'Cetak Kartu Aktivasi QR', icon: <QrCode className="w-5 h-5 shrink-0" /> },
-    { id: 'audit', label: 'Security & Audit Ledger', icon: <ShieldCheck className="w-5 h-5 shrink-0" /> },
+    { id: 'dashboard', label: 'Beranda & Denah RT', icon: <LayoutDashboard className="w-5 h-5 shrink-0" /> },
+    { id: 'kependudukan', label: 'Kependudukan & KK', icon: <Users className="w-5 h-5 shrink-0" /> },
+    { id: 'surat', label: 'Pelayanan E-Surat', icon: <FileText className="w-5 h-5 shrink-0" /> },
+    { id: 'keuangan', label: 'Keuangan & Iuran RT', icon: <Wallet className="w-5 h-5 shrink-0" /> },
+    { id: 'onboarding', label: 'Aktivasi Akun (Cetak QR)', icon: <QrCode className="w-5 h-5 shrink-0" /> },
+    { id: 'audit', label: 'Catatan Aktivitas RT', icon: <ShieldCheck className="w-5 h-5 shrink-0" /> },
   ];
+
+  const roleLabel: Record<string, string> = {
+    KETUA_RT: 'Ketua RT',
+    SEKRETARIS: 'Sekretaris RT',
+    BENDAHARA: 'Bendahara RT',
+    ADMIN: 'Pengurus RT',
+    WARGA: 'Warga',
+  };
 
   return (
     <aside
@@ -66,8 +74,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             </div>
             {!isCollapsed && (
               <div className="truncate">
-                <h1 className="text-sm font-bold text-white tracking-wide">SIM-RT ERP</h1>
-                <p className="text-[11px] text-teal-400 font-mono">RT 05 / RW 02 Depok</p>
+                <h1 className="text-sm font-bold text-white tracking-wide">SIM-RT 05 / RW 02</h1>
+                <p className="text-[11px] text-teal-400 font-mono">Kel. Sukamaju, Depok</p>
               </div>
             )}
           </div>
@@ -137,8 +145,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-200 truncate">{user?.namaLengkap || 'Pengurus RT'}</span>
-              <Badge variant="pii" className="text-[10px] py-0 px-1.5">
-                {user?.role || 'ADMIN'}
+              <Badge variant="default" className="text-[10px] py-0 px-1.5 bg-teal-800 text-teal-100">
+                {roleLabel[user?.role || ''] || user?.role || 'Pengurus'}
               </Badge>
             </div>
             <p className="text-[11px] text-slate-400 font-mono">@{user?.username}</p>
