@@ -188,7 +188,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Pick head of family or first resident in KK
     const kepalaWarga =
-      invite.kk.warga.find((w) => w.hubunganKeluarga === 'KEPALA_KELUARGA') || invite.kk.warga[0];
+      invite.kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA') || invite.kk.warga[0];
 
     if (!kepalaWarga) {
       return reply.status(400).send({
@@ -204,7 +204,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const passwordHash = await hash(password, { memoryCost: 65536, timeCost: 3 });
 
     // Transaction to create User, generate 8 recovery codes, and mark invite claimed
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const newUser = await tx.user.create({
         data: {
           wargaId: kepalaWarga.id,

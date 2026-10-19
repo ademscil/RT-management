@@ -17,7 +17,8 @@
     "db:generate": "pnpm --filter backend-api db:generate",
     "db:push": "pnpm --filter backend-api db:push",
     "db:migrate": "pnpm --filter backend-api db:migrate",
-    "db:seed": "pnpm --filter backend-api db:seed"
+    "db:seed": "pnpm --filter backend-api db:seed",
+    "postinstall": "pnpm --filter backend-api db:generate"
   },
   "devDependencies": {
     "turbo": "^2.4.0",

@@ -92,7 +92,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.warga.count({ where }),
     ]);
 
-    const sanitizedItems = items.map((w) => ({
+    const sanitizedItems = items.map((w: any) => ({
       id: w.id,
       namaLengkap: w.namaLengkap,
       nikMasked: w.nikMasked,
@@ -162,7 +162,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.kartuKeluarga.count({ where }),
     ]);
 
-    const sanitizedKk = items.map((kk) => ({
+    const sanitizedKk = items.map((kk: any) => ({
       id: kk.id,
       noKkMasked: kk.noKkMasked,
       blokRumah: `${kk.rumah.kodeBlok} No. ${kk.rumah.nomorRumah}`,
@@ -171,7 +171,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       statusVerifikasi: kk.statusVerifikasi,
       catatanRevisi: kk.catatanRevisi,
       jumlahAnggota: kk.warga.length,
-      kepalaKeluarga: kk.warga.find((w) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap || kk.warga[0]?.namaLengkap || '-',
+      kepalaKeluarga: kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap || kk.warga[0]?.namaLengkap || '-',
     }));
 
     return reply.send({
@@ -205,14 +205,14 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    const mapData = houses.map((h) => {
-      const allWarga = h.kartuKeluarga.flatMap((kk) => kk.warga);
-      const currentBill = h.kartuKeluarga.flatMap((kk) => kk.tagihanIuran)[0];
+    const mapData = houses.map((h: any) => {
+      const allWarga = h.kartuKeluarga.flatMap((kk: any) => kk.warga);
+      const currentBill = h.kartuKeluarga.flatMap((kk: any) => kk.tagihanIuran)[0];
 
-      const hasLansia = allWarga.some((w) => w.isLansia);
-      const hasDisabilitas = allWarga.some((w) => w.isDisabilitas);
-      const hasBalita = allWarga.some((w) => w.isBalita);
-      const hasIbuHamil = allWarga.some((w) => w.isIbuHamil);
+      const hasLansia = allWarga.some((w: any) => w.isLansia);
+      const hasDisabilitas = allWarga.some((w: any) => w.isDisabilitas);
+      const hasBalita = allWarga.some((w: any) => w.isBalita);
+      const hasIbuHamil = allWarga.some((w: any) => w.isIbuHamil);
 
       return {
         id: h.id,
