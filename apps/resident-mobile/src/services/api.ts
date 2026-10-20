@@ -54,6 +54,11 @@ class MobileApiClient {
       headers.set('Authorization', `Bearer ${this.token}`);
     }
 
+    const activeRtId = localStorage.getItem('simrt_active_rt_id');
+    if (activeRtId && !headers.has('x-rt-id')) {
+      headers.set('x-rt-id', activeRtId);
+    }
+
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
       headers.set('Content-Type', 'application/json');
     }

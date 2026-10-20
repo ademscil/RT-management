@@ -7,7 +7,7 @@ import { API_ORIGIN } from '../../services/api.js';
 
 export const Header: React.FC = () => {
   const { token, user } = useAuth();
-  const { config } = useRtConfig();
+  const { config, rtList, switchRt } = useRtConfig();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
 
   const { isConnected, unreadCount, clearUnreadCount } = useSSE({
@@ -24,15 +24,33 @@ export const Header: React.FC = () => {
 
   return (
     <header className="relative flex items-center justify-between px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 z-20">
-      {/* Title & Organization Info */}
+      {/* Title & Organization Info with Multi-RT Switcher */}
       <div className="flex items-center gap-3">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            {config.displayTitle}
-            <Badge variant="success" className="text-[10px] py-0">
-              Data Resmi RT
-            </Badge>
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              {config.displayTitle}
+              <Badge variant="success" className="text-[10px] py-0">
+                Data Resmi RT
+              </Badge>
+            </h2>
+
+            {rtList.length > 1 && (
+              <select
+                aria-label="Pilih Lingkungan RT Aktif"
+                value={config.id || ''}
+                onChange={(e) => switchRt(e.target.value)}
+                className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-0.5 outline-none font-semibold cursor-pointer max-w-[220px] truncate"
+                title="Ganti Wilayah RT Aktif"
+              >
+                {rtList.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.displayTitle} ({r.namaKelurahan})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <p className="text-xs text-slate-500">{config.displaySub}</p>
         </div>
       </div>

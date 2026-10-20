@@ -9,32 +9,63 @@ export class BootstrapService {
    */
   public static async ensureRtConfig(prisma: any, customData?: any): Promise<any> {
     if (!prisma) return null;
-    let config = await prisma.rukunTetanggaConfig.findFirst();
-    if (!config) {
-      const signer = new Ed25519SignerAdapter();
-      const cryptoAdapter = new EnvelopeCryptoAdapter();
-      const { publicKeyPem, privateKeyPem } = signer.generateKeyPair();
-      const encryptedPrivateKey = cryptoAdapter.encryptField(privateKeyPem);
+    const signer = new Ed25519SignerAdapter();
+    const cryptoAdapter = new EnvelopeCryptoAdapter();
 
-      config = await prisma.rukunTetanggaConfig.create({
+    // 1. Ensure Taman Bunga Pangkalpinang exists
+    let tbConfig = await prisma.rukunTetanggaConfig.findFirst({
+      where: {
+        kodeRt: '010',
+      },
+    });
+    if (!tbConfig) {
+      const { publicKeyPem, privateKeyPem } = signer.generateKeyPair();
+      tbConfig = await prisma.rukunTetanggaConfig.create({
         data: {
-          kodeRt: customData?.kodeRt || '010',
-          kodeRw: customData?.kodeRw || '003',
-          namaKelurahan: customData?.namaKelurahan || 'Taman Bunga',
-          namaKecamatan: customData?.namaKecamatan || 'Gerunggang',
-          namaKota: customData?.namaKota || 'Kota Pangkalpinang',
-          kodePos: customData?.kodePos || '33119',
+          kodeRt: '010',
+          kodeRw: '003',
+          namaKelurahan: 'Taman Bunga',
+          namaKecamatan: 'Gerunggang',
+          namaKota: 'Kota Pangkalpinang',
+          kodePos: '33119',
           ed25519PublicKey: publicKeyPem,
-          ed25519PrivateKeyEnc: encryptedPrivateKey,
+          ed25519PrivateKeyEnc: cryptoAdapter.encryptField(privateKeyPem),
         },
       });
-    } else if (customData) {
-      config = await prisma.rukunTetanggaConfig.update({
-        where: { id: config.id },
-        data: customData,
+    }
+
+    // 2. Ensure Sukamaju Depok exists
+    let smConfig = await prisma.rukunTetanggaConfig.findFirst({
+      where: {
+        kodeRt: '05',
+      },
+    });
+    if (!smConfig) {
+      const { publicKeyPem, privateKeyPem } = signer.generateKeyPair();
+      smConfig = await prisma.rukunTetanggaConfig.create({
+        data: {
+          kodeRt: '05',
+          kodeRw: '02',
+          namaKelurahan: 'Sukamaju',
+          namaKecamatan: 'Cilodong',
+          namaKota: 'Kota Depok',
+          kodePos: '16415',
+          ed25519PublicKey: publicKeyPem,
+          ed25519PrivateKeyEnc: cryptoAdapter.encryptField(privateKeyPem),
+        },
       });
     }
-    return config;
+
+    if (customData) {
+      const target = await prisma.rukunTetanggaConfig.findFirst();
+      if (target) {
+        return prisma.rukunTetanggaConfig.update({
+          where: { id: target.id },
+          data: customData,
+        });
+      }
+    }
+    return tbConfig;
   }
   /**
    * Provisions or ensures a root SUPERUSER account exists in the database

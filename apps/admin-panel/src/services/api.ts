@@ -53,6 +53,11 @@ class ApiClient {
       headers.set('Authorization', `Bearer ${this.token}`);
     }
 
+    const activeRtId = localStorage.getItem('simrt_active_rt_id');
+    if (activeRtId && !headers.has('x-rt-id')) {
+      headers.set('x-rt-id', activeRtId);
+    }
+
     if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
