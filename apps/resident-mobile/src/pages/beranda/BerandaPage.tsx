@@ -113,38 +113,37 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* 1. App Header with Warm Neighborhood Greeting & Digital Resident Card */}
-      <div className="relative bg-gradient-to-br from-teal-900 via-slate-900 to-teal-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-teal-800/40 overflow-hidden">
-        {/* Subtle decorative circles */}
-        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-teal-500/10 blur-2xl pointer-events-none" />
-        <div className="absolute top-20 -left-12 w-36 h-36 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
+      {/* 1. Civic Enterprise Header & Digital Resident Card */}
+      <div className="relative bg-slate-900 text-white p-5 sm:p-7 rounded-2xl shadow-sm border border-slate-800 overflow-hidden animate-rise-in">
+        {/* Clean top accent rule */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-teal-500 via-emerald-400 to-blue-500" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
           {/* Left Column: Greeting and Neighborhood Info */}
-          <div className="lg:col-span-7 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-950/80 border border-teal-500/30 text-teal-300 text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {todayFormatted} • Lingkungan Aman & Kondusif
+          <div className="lg:col-span-7 space-y-2.5">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-teal-300 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>{todayFormatted} • RT 05 / RW 02 Sukamaju</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               {getGreeting()}, <span className="text-teal-300">{user?.namaLengkap || 'Warga'}</span>
             </h1>
 
-            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-xl">
-              Portal pelayanan mandiri warga RT 05 / RW 02 Kelurahan Sukamaju. Anda dapat mengurus surat pengantar resmi ber-QR, memantau transparansi kas, dan melihat jadwal kegiatan warga secara terpadu.
+            <p className="text-slate-300 text-xs leading-relaxed max-w-xl">
+              Portal pelayanan mandiri warga terintegrasi. Akses surat pengantar resmi ber-QR, pantau transparansi kas RT, dan cek jadwal kegiatan gotong royong warga.
             </p>
           </div>
 
-          {/* Right Column: Hero Digital Resident Card (Glassmorphism ID) */}
+          {/* Right Column: Hero Digital Resident Card */}
           <div className="lg:col-span-5">
-            <div className="rounded-2xl p-5 bg-slate-950/90 border border-teal-500/30 shadow-xl space-y-4">
+            <div className="rounded-xl p-4 bg-slate-950/80 border border-slate-800 shadow-sm space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-teal-400 block">
-                    KARTU IDENTITAS RESMI WARGA
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 block">
+                    IDENTITAS RESMI WARGA
                   </span>
-                  <h3 className="text-lg font-black text-white tracking-wide mt-0.5">
+                  <h3 className="text-base font-black text-white tracking-wide mt-0.5">
                     {user?.blokRumah || 'Kavling Blok RT 05'}
                   </h3>
                   <p className="text-xs text-slate-300 font-medium">
@@ -152,19 +151,19 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
                   </p>
                 </div>
 
-                <div className="w-10 h-10 rounded-xl bg-teal-900/60 border border-teal-500/30 flex items-center justify-center text-teal-300 shadow-inner shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-teal-950 border border-teal-800/80 flex items-center justify-center text-teal-300 shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-teal-900/60 flex items-center justify-between text-xs">
+              <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs">
                 <span className="text-emerald-400 font-mono flex items-center gap-1.5 font-semibold text-[11px]">
                   <UserCheck className="w-3.5 h-3.5" /> Status: Terverifikasi
                 </span>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('keluarga')}
-                  className="text-xs font-bold text-white hover:text-teal-300 flex items-center gap-1 transition-colors"
+                  className="text-xs font-bold text-teal-300 hover:text-teal-200 flex items-center gap-1 transition-colors"
                 >
                   Lihat KK Digital <ChevronRight className="w-3.5 h-3.5" />
                 </button>

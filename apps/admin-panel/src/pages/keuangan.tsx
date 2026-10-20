@@ -376,7 +376,7 @@ export const KeuanganPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto scrollbar-slim">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                       <tr>
@@ -467,7 +467,7 @@ export const KeuanganPage: React.FC = () => {
                 description="Belum ada transaksi penerimaan iuran atau pengeluaran kas yang tercatat."
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scrollbar-slim">
                 <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
                     <tr>

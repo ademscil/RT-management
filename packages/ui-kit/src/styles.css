@@ -83,10 +83,21 @@
     --ring: 173 80% 40%;
   }
 
-  /* Elder-friendly font scaling (125%) */
-  html.text-elder {
-    font-size: 120%;
+  /* Global animation timing tokens */
+  :root {
+    --transition-fast: 0.2s;
+    --transition-base: 0.28s;
+    --transition-medium: 0.35s;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   }
+}
+
+/* Ensure form controls inherit font */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
 }
 
 /* Safe Area Insets for mobile notch and bottom gesture pill */
@@ -96,6 +107,106 @@
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Custom Slim Scrollbar */
+.scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.scrollbar-slim::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-slim::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.scrollbar-slim::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Enterprise animations */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-rise-in {
+  animation: riseIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Enterprise Stat Card with Top Gradient Border Accent */
+.stat-card-enterprise {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  animation: riseIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stat-card-enterprise:hover {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+.stat-card-enterprise::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.stat-card-teal::before {
+  background: linear-gradient(90deg, #0f766e, #2dd4bf);
+}
+
+.stat-card-blue::before {
+  background: linear-gradient(90deg, #1d4ed8, #60a5fa);
+}
+
+.stat-card-green::before {
+  background: linear-gradient(90deg, #15803d, #4ade80);
+}
+
+.stat-card-amber::before {
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.stat-card-purple::before {
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
 }
 
 /* Shimmer animation for skeleton loaders */

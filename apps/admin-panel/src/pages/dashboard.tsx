@@ -190,59 +190,59 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
         </div>
       </div>
 
-      {/* 2. Ringkasan Wilayah RT */}
+      {/* 2. Ringkasan Wilayah RT (Enterprise Benchmark) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Penduduk</p>
-              <h4 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{totalWarga} Jiwa</h4>
+        <div className="stat-card-enterprise stat-card-teal">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Penduduk</p>
+              <h4 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1 tabular-nums">{totalWarga} Jiwa</h4>
               <p className="text-xs text-teal-700 dark:text-teal-400 font-medium mt-1">Terdaftar di Buku Induk</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950 flex items-center justify-center text-teal-700 dark:text-teal-400">
-              <Users className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-teal-50 dark:bg-teal-950/80 border border-teal-200 dark:border-teal-800/60 flex items-center justify-center text-teal-700 dark:text-teal-300 shrink-0">
+              <Users className="w-5 h-5" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kavling / Rumah</p>
-              <h4 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{totalRumah} Unit</h4>
-              <p className="text-xs text-slate-500 font-medium mt-1">Blok A & Blok B</p>
+        <div className="stat-card-enterprise stat-card-blue">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kavling / Rumah</p>
+              <h4 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1 tabular-nums">{totalRumah} Unit</h4>
+              <p className="text-xs text-slate-500 font-medium mt-1">Blok A & Blok B Terdata</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
-              <Home className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800/60 flex items-center justify-center text-blue-700 dark:text-blue-300 shrink-0">
+              <Home className="w-5 h-5" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-md transition-shadow border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/20">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Prioritas Darurat</p>
-              <h4 className="text-2xl font-black text-amber-900 dark:text-amber-200 mt-1">{housesWithVulnerability} Rumah</h4>
+        <div className="stat-card-enterprise stat-card-amber">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Prioritas Darurat</p>
+              <h4 className="text-2xl font-black text-amber-900 dark:text-amber-200 mt-1 tabular-nums">{housesWithVulnerability} Rumah</h4>
               <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mt-1">Lansia / Disabilitas / Balita</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-md transition-shadow border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Kas Operasional RT</p>
-              <h4 className="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1">Rp 8.500.000</h4>
+        <div className="stat-card-enterprise stat-card-green">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kas Operasional RT</p>
+              <h4 className="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1 tabular-nums">Rp 8.500.000</h4>
               <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-1">Buku Kas Sah & Terkunci</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300">
-              <Wallet className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shrink-0">
+              <Wallet className="w-5 h-5" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* 3. Denah Interaktif & Rincian Rumah */}
@@ -423,7 +423,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
 
             {/* View 2: Tabular List */}
             {viewMode === 'TABLE' && (
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+              <div className="overflow-x-auto scrollbar-slim border border-slate-200 dark:border-slate-800 rounded-2xl">
                 <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 font-semibold border-b border-slate-200 dark:border-slate-800">
                     <tr>

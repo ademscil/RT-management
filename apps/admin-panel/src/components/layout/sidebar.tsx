@@ -26,17 +26,83 @@ interface SidebarProps {
   onTabChange: (tab: AdminTab) => void;
 }
 
+interface NavItem {
+  id: AdminTab;
+  label: string;
+  icon: React.ReactNode;
+  iconColor: string;
+  iconBg: string;
+  iconBorder: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const navItems: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
-    { id: 'dashboard', label: 'Beranda & Denah RT', icon: <LayoutDashboard className="w-5 h-5 shrink-0" /> },
-    { id: 'kependudukan', label: 'Kependudukan & KK', icon: <Users className="w-5 h-5 shrink-0" /> },
-    { id: 'surat', label: 'Pelayanan E-Surat', icon: <FileText className="w-5 h-5 shrink-0" /> },
-    { id: 'keuangan', label: 'Keuangan & Iuran RT', icon: <Wallet className="w-5 h-5 shrink-0" /> },
-    { id: 'onboarding', label: 'Aktivasi Akun (Cetak QR)', icon: <QrCode className="w-5 h-5 shrink-0" /> },
-    { id: 'audit', label: 'Catatan Aktivitas RT', icon: <ShieldCheck className="w-5 h-5 shrink-0" /> },
+  const navSections: NavSection[] = [
+    {
+      title: 'TATA KELOLA WARGA',
+      items: [
+        {
+          id: 'dashboard',
+          label: 'Beranda & Denah RT',
+          icon: <LayoutDashboard className="w-4 h-4" />,
+          iconColor: 'text-teal-400',
+          iconBg: 'bg-teal-950/60',
+          iconBorder: 'border-teal-700/60',
+        },
+        {
+          id: 'kependudukan',
+          label: 'Kependudukan & KK',
+          icon: <Users className="w-4 h-4" />,
+          iconColor: 'text-blue-400',
+          iconBg: 'bg-blue-950/60',
+          iconBorder: 'border-blue-700/60',
+        },
+        {
+          id: 'surat',
+          label: 'Pelayanan E-Surat',
+          icon: <FileText className="w-4 h-4" />,
+          iconColor: 'text-emerald-400',
+          iconBg: 'bg-emerald-950/60',
+          iconBorder: 'border-emerald-700/60',
+        },
+      ],
+    },
+    {
+      title: 'KEUANGAN & AUDIT',
+      items: [
+        {
+          id: 'keuangan',
+          label: 'Keuangan & Iuran RT',
+          icon: <Wallet className="w-4 h-4" />,
+          iconColor: 'text-amber-400',
+          iconBg: 'bg-amber-950/60',
+          iconBorder: 'border-amber-700/60',
+        },
+        {
+          id: 'onboarding',
+          label: 'Aktivasi Akun (Cetak QR)',
+          icon: <QrCode className="w-4 h-4" />,
+          iconColor: 'text-purple-400',
+          iconBg: 'bg-purple-950/60',
+          iconBorder: 'border-purple-700/60',
+        },
+        {
+          id: 'audit',
+          label: 'Catatan Aktivitas RT',
+          icon: <ShieldCheck className="w-4 h-4" />,
+          iconColor: 'text-rose-400',
+          iconBg: 'bg-rose-950/60',
+          iconBorder: 'border-rose-700/60',
+        },
+      ],
+    },
   ];
 
   const roleLabel: Record<string, string> = {
@@ -55,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     >
       {/* Brand Header */}
       <div>
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+        <div className="flex items-center justify-between p-4 border-b border-slate-800/80">
           <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed ? 'justify-center w-full' : ''}`}>
             <AppLogo size="sm" />
             {!isCollapsed && (
@@ -68,47 +134,83 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {!isCollapsed && (
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-700/70 bg-slate-800/70 hover:bg-slate-700 text-slate-400 hover:text-white transition-all shadow-xs"
               title="Perkecil Sidebar"
+              aria-label="Perkecil Sidebar"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
         {/* Collapsed expand button */}
         {isCollapsed && (
-          <div className="flex justify-center py-2 border-b border-slate-800">
+          <div className="flex justify-center py-2.5 border-b border-slate-800/80">
             <button
               onClick={() => setIsCollapsed(false)}
-              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700/70 bg-slate-800/70 hover:bg-slate-700 text-slate-400 hover:text-white transition-all shadow-xs"
               title="Perluas Sidebar"
+              aria-label="Perluas Sidebar"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* Navigation Items */}
-        <nav className="p-3 space-y-1">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                title={isCollapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-teal-700 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                } ${isCollapsed ? 'justify-center' : ''}`}
-              >
-                {item.icon}
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
-              </button>
-            );
-          })}
+        {/* Navigation Sections */}
+        <nav className="p-3 space-y-4">
+          {navSections.map((section, idx) => (
+            <div key={idx} className="space-y-1">
+              {!isCollapsed ? (
+                <div className="flex items-center gap-2 px-2.5 py-1">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                    {section.title}
+                  </span>
+                  <span className="flex-1 h-[1px] bg-gradient-to-r from-slate-700 to-transparent" />
+                </div>
+              ) : (
+                <div className="h-[1px] bg-slate-800 my-2 mx-2" />
+              )}
+
+              {section.items.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    title={isCollapsed ? item.label : undefined}
+                    aria-label={item.label}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      isActive
+                        ? 'bg-slate-800 text-white shadow-xs border border-slate-700/80'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                    } ${isCollapsed ? 'justify-center p-2' : ''}`}
+                  >
+                    {/* Semantic Icon Wrapper */}
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
+                        isActive
+                          ? `${item.iconBg} ${item.iconColor} ${item.iconBorder} ring-2 ring-teal-500/20`
+                          : 'bg-slate-800/90 text-slate-400 border-slate-700/50'
+                      }`}
+                    >
+                      {item.icon}
+                    </div>
+
+                    {!isCollapsed && (
+                      <span className={`truncate text-left ${isActive ? 'text-white font-bold' : ''}`}>
+                        {item.label}
+                      </span>
+                    )}
+
+                    {isActive && !isCollapsed && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400 shadow-[0_0_6px_#2dd4bf]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </div>
 
@@ -148,10 +250,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         {/* Logout button */}
         <button
           onClick={logout}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors ${
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 transition-colors ${
             isCollapsed ? 'justify-center' : ''
           }`}
           title="Keluar dari Sistem"
+          aria-label="Keluar dari Sistem"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Keluar</span>}
