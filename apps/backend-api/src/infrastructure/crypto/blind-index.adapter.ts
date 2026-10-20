@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
+import { SecretManager } from './secret-manager.service.js';
 
 export class HmacBlindIndexAdapter {
   private readonly pepper: string;
 
   constructor(pepper?: string) {
-    this.pepper = pepper || process.env.BLIND_INDEX_PEPPER || 'simrt_super_secure_blind_index_pepper_salt_998877665544332211';
+    this.pepper = pepper || SecretManager.getBlindIndexPepper();
   }
 
   /**

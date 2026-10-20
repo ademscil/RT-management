@@ -16,6 +16,7 @@ import { onboardingRoutes } from './routes/onboarding.routes.js';
 import { configRoutes } from './routes/config.routes.js';
 import { PrismaService } from '../infrastructure/database/prisma.service.js';
 import { BootstrapService } from '../infrastructure/database/bootstrap.service.js';
+import { SecretManager } from '../infrastructure/crypto/secret-manager.service.js';
 import { ErrorCode } from '@simrt/shared-types';
 
 export function createServer(): FastifyInstance {
@@ -52,13 +53,9 @@ export function createServer(): FastifyInstance {
     exposedHeaders: ['Content-Range', 'X-Content-Range', 'x-rt-id', 'X-RT-ID'],
   });
 
-  // 3. JWT configuration (Fault-tolerant fallback)
-  const jwtSecret =
-    process.env.JWT_ACCESS_SECRET ||
-    'simrt_jwt_access_secret_super_secure_enterprise_key_2026_xyz_production_safe';
-
+  // 3. JWT configuration (CWE-798 compliant - zero hardcoded secrets)
   app.register(jwt, {
-    secret: jwtSecret,
+    secret: SecretManager.getJwtAccessSecret(),
   });
 
   // 3.1 Multipart/Form-Data support for document & receipt uploads

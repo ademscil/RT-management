@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { SecretManager } from './secret-manager.service.js';
 
 export interface EncryptedDocumentResult {
   encryptedBuffer: Buffer;
@@ -17,7 +18,7 @@ export class EnvelopeCryptoAdapter {
     kekHexOrBase64?: string,
     keyVersion: string = process.env.KEK_CURRENT_VERSION || 'v1'
   ) {
-    const rawKek = kekHexOrBase64 || process.env.KEK_SECRET_V1 || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    const rawKek = kekHexOrBase64 || SecretManager.getKekSecret();
     this.keyVersion = keyVersion;
     // Normalize KEK to 32 bytes (256 bits)
     if (rawKek.length === 64) {
