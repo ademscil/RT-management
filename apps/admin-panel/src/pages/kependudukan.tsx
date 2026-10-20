@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { useAuth } from '../context/auth-context.js';
+import { useRtConfig } from '../context/rt-config-context.js';
 import {
   Card,
   CardContent,
@@ -107,6 +108,8 @@ interface KartuKeluargaRow {
 
 export const KependudukanPage: React.FC = () => {
   const { user } = useAuth();
+  const { config } = useRtConfig();
+  const defaultKota = config.namaKota.replace(/^(Kota|Kabupaten)\s+/i, '') || 'Pangkalpinang';
   const [activeTab, setActiveTab] = useState<'HOUSES' | 'CITIZENS'>('HOUSES');
 
   // --- TAB 1: KAVLING & KARTU KELUARGA STATE ---
@@ -174,7 +177,7 @@ export const KependudukanPage: React.FC = () => {
   const [targetKkId, setTargetKkId] = useState('');
   const [formNama, setFormNama] = useState('');
   const [formNik, setFormNik] = useState('');
-  const [formTempatLahir, setFormTempatLahir] = useState('Depok');
+  const [formTempatLahir, setFormTempatLahir] = useState(defaultKota);
   const [formTanggalLahir, setFormTanggalLahir] = useState('1990-01-01');
   const [formGender, setFormGender] = useState('LAKI_LAKI');
   const [formGolDarah, setFormGolDarah] = useState('O_POSITIF');
@@ -325,7 +328,7 @@ export const KependudukanPage: React.FC = () => {
   const handleOpenTambahRumah = () => {
     setRumahKodeBlok('');
     setRumahNomor('');
-    setRumahAlamat('Jl. Sukamaju No. ');
+    setRumahAlamat(`Jl. ${config.namaKelurahan} No. `);
     setRumahStatusHunian('DIHUNI_PEMILIK');
     setRumahNomorKk('');
     setTambahRumahModalOpen(true);
@@ -424,7 +427,7 @@ export const KependudukanPage: React.FC = () => {
     setTargetKkId(kkId);
     setFormNama('');
     setFormNik('');
-    setFormTempatLahir('Depok');
+    setFormTempatLahir(defaultKota);
     setFormTanggalLahir('1990-01-01');
     setFormGender('LAKI_LAKI');
     setFormGolDarah('O_POSITIF');
@@ -489,7 +492,7 @@ export const KependudukanPage: React.FC = () => {
   const handleOpenEditWarga = (w: KkMember | WargaItem) => {
     setEditingWargaId(w.id);
     setEditFormNama(w.namaLengkap);
-    setEditFormTempatLahir(w.tempatLahir || 'Depok');
+    setEditFormTempatLahir(w.tempatLahir || defaultKota);
     setEditFormTanggalLahir(formatDateInput(w.tanggalLahir) || '1990-01-01');
     setEditFormGender((w as any).gender || (w as any).jenisKelamin || 'LAKI_LAKI');
     setEditFormGolDarah(w.golonganDarah || 'O_POSITIF');
@@ -1289,7 +1292,7 @@ export const KependudukanPage: React.FC = () => {
                   id="tambah-alamat-rumah"
                   name="alamat"
                   type="text"
-                  placeholder="Contoh: Jl. Sukamaju Raya No. 05"
+                  placeholder={`Contoh: Jl. ${config.namaKelurahan} No. 05`}
                   value={rumahAlamat}
                   onChange={(e) => setRumahAlamat(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"

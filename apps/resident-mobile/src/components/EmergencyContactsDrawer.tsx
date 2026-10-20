@@ -1,6 +1,7 @@
 import React from 'react';
 import { Phone, ShieldAlert, Flame, Ambulance, X, Building2 } from 'lucide-react';
 import { Button } from '@simrt/ui-kit';
+import { useRtConfig } from '../context/rt-config-context.js';
 
 interface EmergencyContactsDrawerProps {
   isOpen: boolean;
@@ -8,33 +9,34 @@ interface EmergencyContactsDrawerProps {
 }
 
 export const EmergencyContactsDrawer: React.FC<EmergencyContactsDrawerProps> = ({ isOpen, onClose }) => {
+  const { config } = useRtConfig();
   if (!isOpen) return null;
 
   const contacts = [
     {
-      title: 'Ketua RT 05 (Bpk. Bambang)',
-      desc: 'Blok A1-01 • Koordinasi Utama Lingkungan',
+      title: `Ketua ${config.displayTitle}`,
+      desc: `Posko ${config.displayTitle} • Koordinasi Utama Lingkungan`,
       tel: 'tel:081234567890',
       icon: Building2,
       color: 'bg-teal-50 text-teal-700 border-teal-200',
     },
     {
       title: 'Pos Keamanan / Satpam 24 Jam',
-      desc: 'Gerbang Utama • Patroli & Tanggap Insiden',
+      desc: 'Pos Kamling Lingkungan • Patroli & Tanggap Insiden',
       tel: 'tel:081298765432',
       icon: ShieldAlert,
       color: 'bg-blue-50 text-blue-700 border-blue-200',
     },
     {
       title: 'Pemadam Kebakaran (Damkar)',
-      desc: 'Pos Damkar Cilodong • Telepon Darurat 113',
+      desc: `Pos Damkar ${config.namaKecamatan} • Telepon Darurat 113`,
       tel: 'tel:113',
       icon: Flame,
       color: 'bg-red-50 text-red-700 border-red-200',
     },
     {
       title: 'Ambulans & Gawat Darurat Medis',
-      desc: 'PSC 119 Kota Depok / RSUD',
+      desc: `PSC 119 ${config.namaKota} / RSUD`,
       tel: 'tel:119',
       icon: Ambulance,
       color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -50,7 +52,7 @@ export const EmergencyContactsDrawer: React.FC<EmergencyContactsDrawerProps> = (
               <Phone className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 dark:text-slate-100">Kontak Darurat RT 05</h3>
+              <h3 className="text-base font-black text-slate-900 dark:text-slate-100">Kontak Darurat {config.displayTitle}</h3>
               <p className="text-xs text-slate-500">Bantuan cepat medis, keamanan & bencana</p>
             </div>
           </div>

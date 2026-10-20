@@ -669,7 +669,7 @@ export const SuratPage: React.FC = () => {
                   rows={3}
                   value={walkinKeperluan}
                   onChange={(e) => setWalkinKeperluan(e.target.value)}
-                  placeholder="Contoh: Mengurus perpanjangan KTP di Kelurahan Sukamaju / Pengurusan rekening bank..."
+                  placeholder={`Contoh: Mengurus perpanjangan KTP di Kelurahan ${config.namaKelurahan} / Pengurusan administrasi kependudukan...`}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-teal-600"
                 />
               </div>

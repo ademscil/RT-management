@@ -37,7 +37,7 @@ export class LocalNotificationManager {
           notifications: [
             {
               id: options.scheduleId,
-              title: 'Jadwal Ronda Malam RT 05/02',
+              title: 'Jadwal Ronda Siskamling Warga',
               body: `Pengingat: 30 menit lagi giliran jaga ronda Anda di ${options.posRonda}. Harap berkumpul tepat waktu.`,
               schedule: { at: scheduleTime },
               sound: 'beep.wav',

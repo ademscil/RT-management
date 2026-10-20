@@ -55,7 +55,7 @@ class MobileApiClient {
     }
 
     const activeRtId = localStorage.getItem('simrt_active_rt_id');
-    if (activeRtId && !headers.has('x-rt-id')) {
+    if (activeRtId && !headers.has('x-rt-id') && !endpoint.includes('/config/rt/list')) {
       headers.set('x-rt-id', activeRtId);
     }
 

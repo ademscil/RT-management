@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRtConfig } from '../context/rt-config-context.js';
 
 interface AppLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -13,6 +14,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   className = '',
   variant = 'auto',
 }) => {
+  const { config } = useRtConfig();
   const pixelSizes = {
     sm: 32,
     md: 40,
@@ -32,7 +34,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0 transition-transform active:scale-95 drop-shadow-md"
-        aria-label="Logo Resmi SIM-RT 05"
+        aria-label={`Logo Resmi SIM-RT ${config.kodeRt}`}
       >
         <defs>
           {/* Civic Teal & Emerald Gradient */}
@@ -117,7 +119,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
               SIM-RT
             </span>
             <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-teal-600 text-white leading-none">
-              05/02
+              {config.kodeRt}/{config.kodeRw}
             </span>
           </div>
           <span
@@ -129,7 +131,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
                 : 'text-teal-600 dark:text-teal-400'
             }`}
           >
-            Sukamaju, Cilodong
+            {config.namaKelurahan}, {config.namaKecamatan}
           </span>
         </div>
       )}

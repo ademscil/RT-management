@@ -36,11 +36,20 @@ export function createServer(): FastifyInstance {
 
   // 2. CORS configuration (allowing web portal & admin panel cross-origin)
   app.register(cors, {
-    origin: (_origin, cb) => cb(null, true),
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-Requested-With',
+      'x-rt-id',
+      'X-RT-ID',
+      'x-tenant-id',
+      'X-Tenant-ID',
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'x-rt-id', 'X-RT-ID'],
   });
 
   // 3. JWT configuration
