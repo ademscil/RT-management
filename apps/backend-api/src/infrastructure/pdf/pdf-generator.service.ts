@@ -167,6 +167,113 @@ export class PdfGeneratorService {
   }
 
   /**
+   * Generate Single Individual Activation QR Card PDF (A6 landscape: 420 x 297 pt)
+   */
+  public async generateSingleQrActivationCard(card: QrCardItem & { kepalaKeluarga?: string | undefined; rtName?: string | undefined }): Promise<Buffer> {
+    const pdfDoc = await PDFDocument.create();
+    const width = 420;
+    const height = 297;
+    const page = pdfDoc.addPage([width, height]);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontMono = await pdfDoc.embedFont(StandardFonts.CourierBold);
+
+    // Card background
+    page.drawRectangle({
+      x: 10,
+      y: 10,
+      width: width - 20,
+      height: height - 20,
+      borderColor: rgb(0.06, 0.46, 0.43),
+      borderWidth: 2,
+      color: rgb(0.99, 1, 1),
+    });
+
+    // Top Header Banner
+    page.drawRectangle({
+      x: 12,
+      y: height - 55,
+      width: width - 24,
+      height: 43,
+      color: rgb(0.06, 0.46, 0.43),
+    });
+
+    page.drawText('KARTU AKTIVASI WARGA RESMI', {
+      x: 25,
+      y: height - 35,
+      size: 14,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+
+    page.drawText(card.rtName || 'SISTEM INFORMASI MANAJEMEN RUKUN TETANGGA', {
+      x: 25,
+      y: height - 48,
+      size: 9,
+      font,
+      color: rgb(0.85, 0.95, 0.95),
+    });
+
+    // Generate QR Code PNG
+    const qrDataUrl = await QRCode.toDataURL(card.token, {
+      margin: 1,
+      width: 140,
+      errorCorrectionLevel: 'H',
+    });
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64'));
+
+    // Draw QR on Right side
+    page.drawImage(qrImage, {
+      x: width - 155,
+      y: height - 200,
+      width: 130,
+      height: 130,
+    });
+
+    // Draw Resident Details on Left side
+    page.drawText('DATA KELUARGA PENERIMA:', {
+      x: 25,
+      y: height - 75,
+      size: 10,
+      font: fontBold,
+      color: rgb(0.1, 0.3, 0.3),
+    });
+
+    page.drawText('Alamat Rumah:', { x: 25, y: height - 95, size: 9, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(`Blok ${card.blok} No. ${card.nomorRumah}`, { x: 105, y: height - 95, size: 10, font: fontBold, color: rgb(0.06, 0.46, 0.43) });
+
+    page.drawText('Nomor KK:', { x: 25, y: height - 115, size: 9, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(card.nomorKk, { x: 105, y: height - 115, size: 10, font: fontMono, color: rgb(0.1, 0.1, 0.1) });
+
+    if (card.kepalaKeluarga) {
+      page.drawText('Kepala Kel.:', { x: 25, y: height - 135, size: 9, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+      page.drawText(card.kepalaKeluarga, { x: 105, y: height - 135, size: 9, font, color: rgb(0.1, 0.1, 0.1) });
+    }
+
+    page.drawText('Kode Token:', { x: 25, y: height - 155, size: 9, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(card.token, { x: 105, y: height - 155, size: 9, font: fontMono, color: rgb(0.06, 0.46, 0.43) });
+
+    // Security warning box
+    page.drawRectangle({
+      x: 25,
+      y: 25,
+      width: width - 50,
+      height: 52,
+      color: rgb(0.95, 0.98, 0.98),
+      borderColor: rgb(0.8, 0.9, 0.9),
+      borderWidth: 1,
+    });
+
+    page.drawText('PETUNJUK KEAMANAN & AKTIVASI:', { x: 35, y: 64, size: 8, font: fontBold, color: rgb(0.06, 0.46, 0.43) });
+    page.drawText('1. Buka aplikasi Warga SIM-RT di ponsel Anda, lalu pilih menu "Aktivasi Akun".', { x: 35, y: 52, size: 7.5, font, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText('2. Pindai QR di atas atau masukkan kode token secara manual.', { x: 35, y: 41, size: 7.5, font, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText('3. Verifikasi 4 digit terakhir NIK Kepala Keluarga Anda dan buat kata sandi akun.', { x: 35, y: 30, size: 7.5, font, color: rgb(0.3, 0.3, 0.3) });
+
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
+  }
+
+  /**
    * Generate Official E-Surat Pengantar RT PDF with Kop, Ed25519 signature & QR verification
    */
   public async generateSuratPengantarPdf(params: SuratPengantarParams): Promise<Buffer> {

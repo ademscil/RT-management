@@ -14,15 +14,20 @@ export class EnvelopeCryptoAdapter {
   private readonly keyVersion: string;
 
   constructor(
-    kekHexOrBase64: string = process.env.KEK_SECRET_V1 || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    kekHexOrBase64?: string,
     keyVersion: string = process.env.KEK_CURRENT_VERSION || 'v1'
   ) {
+    const rawKek = kekHexOrBase64 || process.env.KEK_SECRET_V1;
+    if (process.env.NODE_ENV === 'production' && (!rawKek || rawKek.startsWith('0123456789abcdef'))) {
+      throw new Error('CRITICAL SECURITY ERROR: KEK_SECRET_V1 must be set to a high-entropy key in production.');
+    }
+    const resolvedKek = rawKek || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     this.keyVersion = keyVersion;
     // Normalize KEK to 32 bytes (256 bits)
-    if (kekHexOrBase64.length === 64) {
-      this.kekSecret = Buffer.from(kekHexOrBase64, 'hex');
+    if (resolvedKek.length === 64) {
+      this.kekSecret = Buffer.from(resolvedKek, 'hex');
     } else {
-      this.kekSecret = crypto.createHash('sha256').update(kekHexOrBase64).digest();
+      this.kekSecret = crypto.createHash('sha256').update(resolvedKek).digest();
     }
   }
 

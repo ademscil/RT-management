@@ -183,19 +183,21 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         blokRumah: `${invite.rumah.kodeBlok} No. ${invite.rumah.nomorRumah}`,
         nomorKkMasked: invite.kk.noKkMasked,
         kepalaKeluarga,
+        requiresNikVerification: true,
       },
       timestamp: new Date().toISOString(),
     });
   });
 
   /**
-   * POST /api/v1/auth/claim-invite (Zero-MDN Onboarding via QR Card)
+   * POST /api/v1/auth/claim-invite (Zero-MDN Onboarding via QR Card with 4-Digit NIK Security Challenge)
    */
   fastify.post('/claim-invite', async (request, reply) => {
     const rawBody = request.body as any;
     const token = rawBody?.token;
     const password = rawBody?.password;
     let username = rawBody?.username;
+    const nikVerification = rawBody?.nikVerification || rawBody?.last4Nik;
 
     if (!token || !password) {
       return reply.status(400).send({
@@ -227,6 +229,26 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         },
         timestamp: new Date().toISOString(),
       });
+    }
+
+    // Security Challenge: Verify 4 digits of NIK to prevent unauthorized card scanning
+    if (nikVerification && typeof nikVerification === 'string' && nikVerification.trim().length >= 4) {
+      const cleanInput = nikVerification.trim().slice(-4);
+      const isMatch = invite.kk.warga.some((w: any) => {
+        const masked = String(w.nikMasked || '');
+        return masked.endsWith(cleanInput);
+      });
+
+      if (!isMatch) {
+        return reply.status(403).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_FORBIDDEN,
+            message: 'Verifikasi keamanan gagal: 4 digit terakhir NIK tidak cocok dengan data anggota Kartu Keluarga ini.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
 
     // Auto-generate clean username if omitted by resident

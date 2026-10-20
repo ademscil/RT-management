@@ -119,6 +119,19 @@ export const OnboardingPage: React.FC = () => {
         </Button>
       </div>
 
+      {/* Safety Notice for Admin Distribution */}
+      <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3">
+        <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold">
+          !
+        </div>
+        <div className="space-y-0.5">
+          <p className="font-bold text-amber-950 dark:text-amber-200">Panduan Distribusi Kartu Fisik vs Digital:</p>
+          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+            Lembar PDF A4 ini berisi <strong>8 kartu keluarga berbeda</strong> dengan garis potong. <strong>Wajib digunting menjadi 8 kartu fisik satuan</strong> sebelum dimasukkan ke kotak surat warga. <em>Jangan kirim file PDF A4 ini utuh ke grup WhatsApp warga</em> agar QR keluarga lain tidak terlihat. Untuk mengirim kartu personal per KK via WA, gunakan tombol <strong>Unduh Kartu Aktivasi (1 KK)</strong> di menu <strong>Data Kependudukan</strong>.
+          </p>
+        </div>
+      </div>
+
       {/* Info Guide Card */}
       <Card className="border-teal-200 bg-teal-50/40 dark:bg-slate-900 dark:border-slate-800">
         <CardContent className="p-5 flex flex-col md:flex-row items-start gap-5">

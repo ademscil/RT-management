@@ -377,11 +377,22 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/dokumen/upload', async (request, reply) => {
     let wargaId = '';
     let documentType = 'KTP';
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     if (request.isMultipart()) {
       const parts = request.parts();
       for await (const part of parts) {
         if (part.type === 'file') {
+          if (!allowedMimeTypes.includes(part.mimetype)) {
+            return reply.status(400).send({
+              success: false,
+              error: {
+                code: ErrorCode.ERR_VALIDATION,
+                message: 'Format file tidak didukung. Harap unggah foto KTP berformat JPG, PNG, atau WebP.',
+              },
+              timestamp: new Date().toISOString(),
+            });
+          }
           await part.toBuffer();
         } else {
           if (part.fieldname === 'wargaId') wargaId = part.value as string;
@@ -395,6 +406,28 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (wargaId) {
+      const targetWarga = await prisma.warga.findUnique({ where: { id: wargaId } });
+      if (!targetWarga) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Anti-IDOR: if user is WARGA, must belong to own KK
+      const session = request.userSession;
+      if (session && session.role === UserRole.WARGA && session.kkId && targetWarga.kkId !== session.kkId) {
+        return reply.status(403).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_FORBIDDEN,
+            message: 'Akses ditolak. Anda hanya dapat mengunggah dokumen anggota Kartu Keluarga Anda sendiri.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       await prisma.warga.update({
         where: { id: wargaId },
         data: {

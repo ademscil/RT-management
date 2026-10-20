@@ -21,6 +21,7 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
   // Password Setup State
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nikVerification, setNikVerification] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Recovery Codes Generated
@@ -89,6 +90,7 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
       }>('/auth/claim-invite', {
         token: tokenInput,
         password,
+        nikVerification,
       });
 
       setRecoveryCodes(res.recoveryCodes);
@@ -227,9 +229,32 @@ export const ActivationPage: React.FC<ActivationPageProps> = ({ onBackToLogin })
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-sm font-bold text-white">Langkah 2: Buat Password Akun</h2>
+              <h2 className="text-sm font-bold text-white">Langkah 2: Verifikasi NIK & Buat Password</h2>
               <p className="text-xs text-slate-400">
-                Password ini digunakan untuk masuk ke Super-App Warga dan mengelola data keluarga.
+                Masukkan 4 digit terakhir NIK untuk memvalidasi kepemilikan sah Kartu Keluarga, lalu tentukan password Anda.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="warga-nik-verify" className="text-xs font-semibold text-slate-300">
+                4 Digit Terakhir NIK Anggota/Kepala Keluarga:
+              </label>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-teal-400" />
+                <input
+                  id="warga-nik-verify"
+                  name="nikVerification"
+                  type="text"
+                  maxLength={4}
+                  value={nikVerification}
+                  onChange={(e) => setNikVerification(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Contoh: 0001"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono tracking-widest text-teal-300 focus:ring-2 focus:ring-teal-500 outline-none"
+                  required
+                />
+              </div>
+              <p className="text-[10px] text-slate-400">
+                *Cek 4 digit terakhir NIK pada KTP atau Kartu Keluarga Anda (anti-salah scan).
               </p>
             </div>
 

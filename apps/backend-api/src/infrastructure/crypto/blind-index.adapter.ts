@@ -3,8 +3,12 @@ import crypto from 'node:crypto';
 export class HmacBlindIndexAdapter {
   private readonly pepper: string;
 
-  constructor(pepper: string = process.env.BLIND_INDEX_PEPPER || 'simrt_super_secure_blind_index_pepper_salt_998877665544332211') {
-    this.pepper = pepper;
+  constructor(pepper?: string) {
+    const rawPepper = pepper || process.env.BLIND_INDEX_PEPPER;
+    if (process.env.NODE_ENV === 'production' && (!rawPepper || rawPepper.includes('super_secure_blind_index'))) {
+      throw new Error('CRITICAL SECURITY ERROR: BLIND_INDEX_PEPPER must be configured in production.');
+    }
+    this.pepper = rawPepper || 'simrt_super_secure_blind_index_pepper_salt_998877665544332211';
   }
 
   /**

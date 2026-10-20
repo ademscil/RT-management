@@ -6,6 +6,7 @@ import {
   PaginationQuerySchema,
   buildPaginationMeta,
   UserRole,
+  ErrorCode,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
 
@@ -72,6 +73,77 @@ export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
 
     reply.header('Content-Type', 'application/pdf');
     reply.header('Content-Disposition', 'attachment; filename="KARTU_AKTIVASI_WARGA_RT0502.pdf"');
+    return reply.send(pdfBuffer);
+  });
+
+  /**
+   * GET /api/v1/onboarding/card/:kkId (Generates Single Individual Activation QR Card PDF)
+   */
+  fastify.get('/card/:kkId', async (request, reply) => {
+    const { kkId } = request.params as { kkId: string };
+
+    const kk = await prisma.kartuKeluarga.findUnique({
+      where: { id: kkId },
+      include: {
+        rumah: true,
+        warga: true,
+        onboardingInvites: {
+          where: { isClaimed: false, expiresAt: { gt: new Date() } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!kk) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Kartu Keluarga tidak ditemukan.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    let rawToken: string;
+    if (kk.onboardingInvites.length > 0) {
+      // Create fresh token for single download to ensure token is in QR
+      rawToken = `SIMRT-INVITE-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+    } else {
+      rawToken = `SIMRT-INVITE-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const tokenMasked = `${rawToken.substring(0, 12)}****${rawToken.substring(rawToken.length - 4)}`;
+
+    await prisma.onboardingInvite.create({
+      data: {
+        kkId: kk.id,
+        rumahId: kk.rumahId,
+        tokenHash,
+        tokenMasked,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        isClaimed: false,
+      },
+    });
+
+    const kepalaKeluarga =
+      kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap ||
+      kk.warga[0]?.namaLengkap ||
+      'Kepala Keluarga';
+
+    const rtConfig = await prisma.rukunTetanggaConfig.findFirst();
+    const rtName = rtConfig ? `RT ${rtConfig.kodeRt} / RW ${rtConfig.kodeRw} - ${rtConfig.namaKelurahan}` : undefined;
+
+    const pdfBuffer = await pdfService.generateSingleQrActivationCard({
+      nomorKk: kk.noKkMasked,
+      blok: kk.rumah.kodeBlok,
+      nomorRumah: kk.rumah.nomorRumah,
+      token: rawToken,
+      kepalaKeluarga,
+      rtName,
+    });
+
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename="KARTU_AKTIVASI_${kk.rumah.kodeBlok}_${kk.rumah.nomorRumah}.pdf"`);
     return reply.send(pdfBuffer);
   });
 

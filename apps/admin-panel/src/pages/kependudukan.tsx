@@ -15,8 +15,9 @@ import {
   UserPlus,
   MapPin,
   KeyRound,
+  QrCode,
 } from 'lucide-react';
-import { api } from '../services/api.js';
+import { api, API_ORIGIN } from '../services/api.js';
 import { useAuth } from '../context/auth-context.js';
 import { useRtConfig } from '../context/rt-config-context.js';
 import {
@@ -567,6 +568,46 @@ export const KependudukanPage: React.FC = () => {
     }
   };
 
+  const [downloadingKkId, setDownloadingKkId] = useState<string | null>(null);
+
+  const handleDownloadSingleCard = async (kkId: string, blok: string) => {
+    setDownloadingKkId(kkId);
+    try {
+      notify.info({ title: 'Membuat Kartu Aktivasi', description: `Menyiapkan kartu QR individual untuk ${blok}...` });
+      const token = api.getToken();
+      const currentRtId = localStorage.getItem('simrt_active_rt_id') || 'pangkalpinang';
+      const response = await fetch(`${API_ORIGIN}/api/v1/onboarding/card/${kkId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-rt-id': currentRtId,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal menghasilkan file PDF kartu aktivasi keluarga.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `KARTU_AKTIVASI_${blok.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      notify.success({
+        title: 'Kartu QR Siap Dikirim',
+        description: `Kartu aktivasi ${blok} berhasil diunduh. Siap dicetak atau dikirim ke warga via WhatsApp.`,
+      });
+    } catch (err: any) {
+      notify.error({ title: 'Gagal Unduh Kartu', description: err.message });
+    } finally {
+      setDownloadingKkId(null);
+    }
+  };
+
   // --- PII REVEAL ACTIONS ---
   const handleOpenPiiModal = (warga: WargaItem) => {
     setPiiTargetWarga(warga);
@@ -805,6 +846,16 @@ export const KependudukanPage: React.FC = () => {
                           title="Buka panel kelola penghuni di rumah ini"
                         >
                           <Users className="w-3.5 h-3.5" /> Kelola Penghuni
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadSingleCard(kk.id, kk.blokRumah)}
+                          isLoading={downloadingKkId === kk.id}
+                          className="px-2.5 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/40"
+                          title="Unduh Kartu Aktivasi QR Tunggal (PDF khusus KK ini untuk dibagikan via WhatsApp)"
+                        >
+                          <QrCode className="w-3.5 h-3.5" />
                         </Button>
                         <Button
                           variant="outline"

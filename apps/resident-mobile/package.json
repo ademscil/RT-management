@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "lint": "tsc --noEmit",
     "cap:sync": "cap sync",
     "cap:build:android": "tsc && vite build && cap sync android"
   },

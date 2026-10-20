@@ -171,11 +171,22 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post('/pembayaran/upload-bukti', async (request, reply) => {
     let tagihanId = '';
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     if (request.isMultipart()) {
       const parts = request.parts();
       for await (const part of parts) {
         if (part.type === 'file') {
+          if (!allowedMimeTypes.includes(part.mimetype)) {
+            return reply.status(400).send({
+              success: false,
+              error: {
+                code: ErrorCode.ERR_VALIDATION,
+                message: 'Format file tidak didukung. Harap unggah file gambar (JPG, PNG, WebP) atau PDF.',
+              },
+              timestamp: new Date().toISOString(),
+            });
+          }
           await part.toBuffer();
         } else {
           if (part.fieldname === 'tagihanId') {
@@ -205,6 +216,19 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({
         success: false,
         error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Tagihan tidak ditemukan.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Anti-IDOR: verify ownership if role is WARGA
+    const session = request.userSession;
+    if (session && session.role === UserRole.WARGA && session.kkId && tagihan.kkId !== session.kkId) {
+      return reply.status(403).send({
+        success: false,
+        error: {
+          code: ErrorCode.ERR_FORBIDDEN,
+          message: 'Akses ditolak. Anda hanya dapat mengunggah bukti bayar untuk tagihan Kartu Keluarga Anda sendiri.',
+        },
         timestamp: new Date().toISOString(),
       });
     }
