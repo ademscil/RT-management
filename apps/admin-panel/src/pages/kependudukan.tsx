@@ -100,7 +100,7 @@ export const KependudukanPage: React.FC = () => {
   const [kkList, setKkList] = useState<KartuKeluargaRow[]>([]);
   const [kkMeta, setKkMeta] = useState<PaginationMeta>({
     page: 1,
-    limit: 12,
+    limit: 10,
     total: 0,
     totalPages: 1,
     hasNextPage: false,
@@ -206,20 +206,19 @@ export const KependudukanPage: React.FC = () => {
         setKkList(res.items);
         setKkMeta(res.meta);
 
-        // Update selected house workbench if currently open
-        if (selectedHouseKk) {
-          const updatedSelected = res.items.find((item) => item.id === selectedHouseKk.id);
-          if (updatedSelected) {
-            setSelectedHouseKk(updatedSelected);
-          }
-        }
+        // Update selected house workbench if currently open (using functional updater to keep callback stable)
+        setSelectedHouseKk((prev) => {
+          if (!prev) return null;
+          const updatedSelected = res.items.find((item) => item.id === prev.id || item.rumahId === prev.rumahId);
+          return updatedSelected || prev;
+        });
       } catch (err: any) {
         notify.error({ title: 'Gagal Memuat Data KK & Rumah', description: err.message });
       } finally {
         setIsKkLoading(false);
       }
     },
-    [selectedHouseKk]
+    []
   );
 
   const fetchWarga = useCallback(

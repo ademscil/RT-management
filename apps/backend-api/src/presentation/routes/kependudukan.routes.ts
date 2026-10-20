@@ -125,7 +125,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   /**
-   * GET /api/v1/kependudukan/kk (Server-side Pagination & Search for Kartu Keluarga)
+   * GET /api/v1/kependudukan/kk (Server-side Pagination & Search for Kartu Keluarga & Houses)
    */
   fastify.get('/kk', async (request, reply) => {
     const session = request.userSession!;
@@ -135,70 +135,136 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     const safeLimit = Math.min(100, Math.max(1, Number(limit)));
     const skip = (safePage - 1) * safeLimit;
 
-    const where: Record<string, unknown> = {};
     if (session.role === UserRole.WARGA) {
-      where.id = session.kkId;
+      const where: Record<string, unknown> = { id: session.kkId };
+      const [items, total] = await Promise.all([
+        prisma.kartuKeluarga.findMany({
+          where,
+          skip,
+          take: safeLimit,
+          include: { rumah: true, warga: true },
+        }),
+        prisma.kartuKeluarga.count({ where }),
+      ]);
+
+      const sanitized = items.map((kk: any) => ({
+        id: kk.id,
+        rumahId: kk.rumahId,
+        kodeBlok: kk.rumah.kodeBlok,
+        nomorRumah: kk.rumah.nomorRumah,
+        statusHunian: kk.rumah.statusHunian,
+        noKkMasked: kk.noKkMasked,
+        nomorKkMasked: kk.noKkMasked,
+        blokRumah: `${kk.rumah.kodeBlok} No. ${kk.rumah.nomorRumah}`,
+        alamatDomisili: kk.rumah.alamat,
+        alamatLengkap: kk.rumah.alamat,
+        statusDomisili: kk.statusDomisili,
+        statusVerifikasi: kk.statusVerifikasi,
+        catatanRevisi: kk.catatanRevisi,
+        jumlahAnggota: kk.warga.length,
+        kepalaKeluarga: kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap || kk.warga[0]?.namaLengkap || '-',
+        anggota: kk.warga.map((w: any) => ({
+          id: w.id,
+          namaLengkap: w.namaLengkap,
+          nikMasked: w.nikMasked,
+          hubunganKeluarga: w.hubunganKeluarga,
+          jenisKelamin: w.gender || w.jenisKelamin,
+          gender: w.gender,
+          tempatLahir: w.tempatLahir,
+          tanggalLahir: w.tanggalLahir?.toISOString ? w.tanggalLahir.toISOString() : String(w.tanggalLahir),
+          golonganDarah: w.golonganDarah,
+          agama: w.agama,
+          pekerjaan: w.pekerjaan,
+          pendidikanTerakhir: w.pendidikanTerakhir,
+          statusPerkawinan: w.statusPerkawinan,
+          statusKependudukan: w.statusKependudukan,
+          isLansia: w.isLansia,
+          isDisabilitas: w.isDisabilitas,
+          isBalita: w.isBalita,
+          isIbuHamil: w.isIbuHamil,
+        })),
+      }));
+
+      return reply.send({
+        success: true,
+        data: {
+          items: sanitized,
+          meta: buildPaginationMeta(total, safePage, safeLimit),
+        },
+        timestamp: new Date().toISOString(),
+      });
     }
 
+    // For Admins: Query all Houses so empty houses & newly registered houses are 100% visible & manageable!
+    const where: Record<string, unknown> = {};
     if (search) {
       where.OR = [
-        { noKkMasked: { contains: search } },
-        { rumah: { alamat: { contains: search, mode: 'insensitive' } } },
-        { rumah: { kodeBlok: { contains: search, mode: 'insensitive' } } },
+        { kodeBlok: { contains: search, mode: 'insensitive' } },
+        { nomorRumah: { contains: search, mode: 'insensitive' } },
+        { alamat: { contains: search, mode: 'insensitive' } },
+        { kartuKeluarga: { some: { noKkMasked: { contains: search } } } },
+        { kartuKeluarga: { some: { warga: { some: { namaLengkap: { contains: search, mode: 'insensitive' } } } } } },
       ];
     }
 
-    const [items, total] = await Promise.all([
-      prisma.kartuKeluarga.findMany({
+    const [houses, total] = await Promise.all([
+      prisma.rumahKavling.findMany({
         where,
         skip,
         take: safeLimit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { kodeBlok: 'asc' },
         include: {
-          rumah: true,
-          warga: true,
+          kartuKeluarga: {
+            include: { warga: true },
+          },
         },
       }),
-      prisma.kartuKeluarga.count({ where }),
+      prisma.rumahKavling.count({ where }),
     ]);
 
-    const sanitizedKk = items.map((kk: any) => ({
-      id: kk.id,
-      rumahId: kk.rumahId,
-      kodeBlok: kk.rumah.kodeBlok,
-      nomorRumah: kk.rumah.nomorRumah,
-      statusHunian: kk.rumah.statusHunian,
-      noKkMasked: kk.noKkMasked,
-      nomorKkMasked: kk.noKkMasked,
-      blokRumah: `${kk.rumah.kodeBlok} No. ${kk.rumah.nomorRumah}`,
-      alamatDomisili: kk.rumah.alamat,
-      alamatLengkap: kk.rumah.alamat,
-      statusDomisili: kk.statusDomisili,
-      statusVerifikasi: kk.statusVerifikasi,
-      catatanRevisi: kk.catatanRevisi,
-      jumlahAnggota: kk.warga.length,
-      kepalaKeluarga: kk.warga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA')?.namaLengkap || kk.warga[0]?.namaLengkap || '-',
-      anggota: kk.warga.map((w: any) => ({
-        id: w.id,
-        namaLengkap: w.namaLengkap,
-        nikMasked: w.nikMasked,
-        hubunganKeluarga: w.hubunganKeluarga,
-        jenisKelamin: w.gender || w.jenisKelamin,
-        gender: w.gender,
-        tempatLahir: w.tempatLahir,
-        tanggalLahir: w.tanggalLahir?.toISOString ? w.tanggalLahir.toISOString() : String(w.tanggalLahir),
-        golonganDarah: w.golonganDarah,
-        agama: w.agama,
-        pekerjaan: w.pekerjaan,
-        pendidikanTerakhir: w.pendidikanTerakhir,
-        statusPerkawinan: w.statusPerkawinan,
-        statusKependudukan: w.statusKependudukan,
-        isLansia: w.isLansia,
-        isDisabilitas: w.isDisabilitas,
-        isBalita: w.isBalita,
-        isIbuHamil: w.isIbuHamil,
-      })),
-    }));
+    const sanitizedKk = houses.map((house: any) => {
+      const primaryKk = house.kartuKeluarga[0] || null;
+      const allWarga = house.kartuKeluarga.flatMap((kk: any) => kk.warga);
+      const kepala = allWarga.find((w: any) => w.hubunganKeluarga === 'KEPALA_KELUARGA') || allWarga[0] || null;
+
+      return {
+        id: primaryKk ? primaryKk.id : `house-${house.id}`,
+        rumahId: house.id,
+        kodeBlok: house.kodeBlok,
+        nomorRumah: house.nomorRumah,
+        statusHunian: house.statusHunian,
+        noKkMasked: primaryKk ? primaryKk.noKkMasked : 'Belum Ada KK',
+        nomorKkMasked: primaryKk ? primaryKk.noKkMasked : 'Belum Ada KK',
+        blokRumah: `${house.kodeBlok} No. ${house.nomorRumah}`,
+        alamatDomisili: house.alamat,
+        alamatLengkap: house.alamat,
+        statusDomisili: primaryKk ? primaryKk.statusDomisili : (house.statusHunian === 'DIHUNI_PENYEWA' ? 'KONTRAK' : 'TETAP'),
+        statusVerifikasi: primaryKk ? primaryKk.statusVerifikasi : 'VERIFIED',
+        catatanRevisi: primaryKk?.catatanRevisi || null,
+        jumlahAnggota: allWarga.length,
+        kepalaKeluarga: kepala ? kepala.namaLengkap : (house.statusHunian === 'KOSONG' ? 'Rumah Kosong' : 'Belum Ada Penghuni'),
+        anggota: allWarga.map((w: any) => ({
+          id: w.id,
+          namaLengkap: w.namaLengkap,
+          nikMasked: w.nikMasked,
+          hubunganKeluarga: w.hubunganKeluarga,
+          jenisKelamin: w.gender || w.jenisKelamin,
+          gender: w.gender,
+          tempatLahir: w.tempatLahir,
+          tanggalLahir: w.tanggalLahir?.toISOString ? w.tanggalLahir.toISOString() : String(w.tanggalLahir),
+          golonganDarah: w.golonganDarah,
+          agama: w.agama,
+          pekerjaan: w.pekerjaan,
+          pendidikanTerakhir: w.pendidikanTerakhir,
+          statusPerkawinan: w.statusPerkawinan,
+          statusKependudukan: w.statusKependudukan,
+          isLansia: w.isLansia,
+          isDisabilitas: w.isDisabilitas,
+          isBalita: w.isBalita,
+          isIbuHamil: w.isIbuHamil,
+        })),
+      };
+    });
 
     return reply.send({
       success: true,
@@ -494,12 +560,36 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
     async (request, reply) => {
       const rawBody = request.body as any;
-      if (!rawBody?.kkId) {
+      let targetKkId = rawBody?.kkId;
+
+      if (!targetKkId && !rawBody?.rumahId) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: 'kkId wajib disertakan.' },
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'kkId atau rumahId wajib disertakan.' },
           timestamp: new Date().toISOString(),
         });
+      }
+
+      // Handle house-prefix or direct rumahId to auto-resolve or auto-create KK
+      if ((targetKkId && targetKkId.startsWith('house-')) || (!targetKkId && rawBody?.rumahId)) {
+        const targetRumahId = rawBody?.rumahId || targetKkId.replace('house-', '');
+        let existingKk = await prisma.kartuKeluarga.findFirst({ where: { rumahId: targetRumahId } });
+        if (!existingKk) {
+          const house = await prisma.rumahKavling.findUnique({ where: { id: targetRumahId } });
+          const provisionalNoKk = `327601${String(Date.now()).slice(-10)}`;
+          const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(provisionalNoKk);
+          existingKk = await prisma.kartuKeluarga.create({
+            data: {
+              rumahId: targetRumahId,
+              noKkEncrypted: cryptoAdapter.encryptField(provisionalNoKk),
+              noKkBlindIndex,
+              noKkMasked: blindIndexAdapter.maskNik(provisionalNoKk),
+              statusDomisili: house?.statusHunian === 'DIHUNI_PENYEWA' ? 'KONTRAK' : 'TETAP',
+              statusVerifikasi: 'VERIFIED',
+            },
+          });
+        }
+        targetKkId = existingKk.id;
       }
 
       const input = WargaCreateSchema.parse(rawBody);
@@ -516,7 +606,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
 
       const created = await prisma.warga.create({
         data: {
-          kkId: rawBody.kkId,
+          kkId: targetKkId,
           namaLengkap: input.namaLengkap,
           nikEncrypted: cryptoAdapter.encryptField(input.nik),
           nikBlindIndex: blindIndex,
@@ -658,25 +748,25 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      // If nomor KK is provided, also create initial KartuKeluarga
-      let createdKk = null;
-      if (nomorKk && typeof nomorKk === 'string' && nomorKk.trim().length === 16) {
-        const cleanKk = nomorKk.trim();
-        const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(cleanKk);
-        const noKkMasked = blindIndexAdapter.maskNik(cleanKk);
-        const noKkEncrypted = cryptoAdapter.encryptField(cleanKk);
+      // Auto-create initial KartuKeluarga for the house
+      const cleanKk = (nomorKk && typeof nomorKk === 'string' && nomorKk.trim().length === 16)
+        ? nomorKk.trim()
+        : `327601${String(Date.now()).slice(-10)}`;
 
-        createdKk = await prisma.kartuKeluarga.create({
-          data: {
-            rumahId: house.id,
-            noKkEncrypted,
-            noKkBlindIndex,
-            noKkMasked,
-            statusDomisili: statusHunian === 'DIHUNI_PENYEWA' ? 'KONTRAK' : 'TETAP',
-            statusVerifikasi: 'VERIFIED',
-          },
-        });
-      }
+      const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(cleanKk);
+      const noKkMasked = blindIndexAdapter.maskNik(cleanKk);
+      const noKkEncrypted = cryptoAdapter.encryptField(cleanKk);
+
+      const createdKk = await prisma.kartuKeluarga.create({
+        data: {
+          rumahId: house.id,
+          noKkEncrypted,
+          noKkBlindIndex,
+          noKkMasked,
+          statusDomisili: statusHunian === 'DIHUNI_PENYEWA' ? 'KONTRAK' : 'TETAP',
+          statusVerifikasi: 'VERIFIED',
+        },
+      });
 
       return reply.send({
         success: true,

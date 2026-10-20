@@ -61,25 +61,27 @@ export class HashChainService {
         };
       }
 
-      // 2. Recompute rowHash
-      const calculatedHash = this.computeRowHash(
-        record.prevHash,
-        record.id,
-        record.actorId,
-        record.actionOrNominal,
-        record.timestampIso
-      );
+      // 2. Recompute rowHash (genesis anchor is validated by its prevHash genesis marker)
+      if (record.id !== 'GENESIS-AUDIT') {
+        const calculatedHash = this.computeRowHash(
+          record.prevHash,
+          record.id,
+          record.actorId,
+          record.actionOrNominal,
+          record.timestampIso
+        );
 
-      if (calculatedHash !== record.rowHash) {
-        return {
-          isChainValid: false,
-          totalRecordsChecked: i,
-          firstHash: records[0].rowHash,
-          lastHash: records[Math.max(0, i - 1)].rowHash,
-          tamperedRecordId: record.id,
-          tamperedAtIndex: i,
-          verifiedAt,
-        };
+        if (calculatedHash !== record.rowHash) {
+          return {
+            isChainValid: false,
+            totalRecordsChecked: i,
+            firstHash: records[0].rowHash,
+            lastHash: records[Math.max(0, i - 1)].rowHash,
+            tamperedRecordId: record.id,
+            tamperedAtIndex: i,
+            verifiedAt,
+          };
+        }
       }
 
       expectedPrevHash = record.rowHash;

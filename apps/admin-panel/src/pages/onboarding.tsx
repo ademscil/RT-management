@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Printer, CheckCircle2, Clock, Shield } from 'lucide-react';
-import { api } from '../services/api.js';
+import { api, API_ORIGIN } from '../services/api.js';
 import {
   Card,
   CardHeader,
@@ -63,8 +63,7 @@ export const OnboardingPage: React.FC = () => {
     setIsDownloading(true);
     try {
       const token = api.getToken();
-      const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/v1/onboarding/generate-cards`, {
+      const response = await fetch(`${API_ORIGIN}/api/v1/onboarding/generate-cards`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

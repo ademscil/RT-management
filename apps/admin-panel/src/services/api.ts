@@ -1,6 +1,6 @@
 import type { ApiResponse } from '@simrt/shared-types';
 
-const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || '';
+export const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
 
 class ApiClient {
   private token: string | null = null;

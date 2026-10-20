@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Bell, Radio } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
 import { useSSE, Badge } from '@simrt/ui-kit';
+import { API_ORIGIN } from '../../services/api.js';
 
 export const Header: React.FC = () => {
   const { token, user } = useAuth();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
 
-  const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
   const { isConnected, unreadCount, clearUnreadCount } = useSSE({
-    url: `${apiUrl}/api/v1/notifications/stream`,
+    url: `${API_ORIGIN}/api/v1/notifications/stream`,
     token,
   });
 
