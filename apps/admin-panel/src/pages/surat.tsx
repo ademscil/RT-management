@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { useAuth } from '../context/auth-context.js';
+import { useRtConfig } from '../context/rt-config-context.js';
 import {
   Card,
   CardContent,
@@ -55,6 +56,7 @@ interface WargaOption {
 
 export const SuratPage: React.FC = () => {
   const { user } = useAuth();
+  const { config } = useRtConfig();
   const [suratList, setSuratList] = useState<SuratItem[]>([]);
   const [meta, setMeta] = useState<PaginationMeta>({
     page: 1,
@@ -452,13 +454,13 @@ export const SuratPage: React.FC = () => {
                 {/* Kop Surat Resmi RT */}
                 <div className="text-center border-b-2 border-black pb-3 mb-5">
                   <h3 className="font-bold text-sm tracking-wider uppercase">
-                    RUKUN TETANGGA 05 / RUKUN WARGA 02
+                    RUKUN TETANGGA {config.kodeRt} / RUKUN WARGA {config.kodeRw}
                   </h3>
                   <h4 className="font-bold text-xs uppercase">
-                    KELURAHAN SUKAMAJU, KECAMATAN CILODONG, KOTA DEPOK
+                    KELURAHAN {config.namaKelurahan.toUpperCase()}, KECAMATAN {config.namaKecamatan.toUpperCase()}, {config.namaKota.toUpperCase()}
                   </h4>
                   <p className="text-[10px] italic font-sans text-slate-600 mt-0.5">
-                    Alamat: Jl. Utama RT 05/02 Sukamaju, Cilodong, Kota Depok, Jawa Barat 16415
+                    Alamat: Lingkungan {config.displayTitle} Kel. {config.namaKelurahan}, {config.namaKota} {config.kodePos}
                   </p>
                 </div>
 
@@ -474,7 +476,7 @@ export const SuratPage: React.FC = () => {
 
                 {/* Pembuka */}
                 <p className="mb-3 text-justify">
-                  Yang bertanda tangan di bawah ini Ketua Rukun Tetangga (RT) 05 / RW 02 Kelurahan Sukamaju, Kecamatan Cilodong, Kota Depok, dengan ini menerangkan bahwa:
+                  Yang bertanda tangan di bawah ini Ketua Rukun Tetangga (RT) {config.kodeRt} / RW {config.kodeRw} Kelurahan {config.namaKelurahan}, Kecamatan {config.namaKecamatan}, {config.namaKota}, dengan ini menerangkan bahwa:
                 </p>
 
                 {/* Data Pemohon */}
@@ -493,7 +495,7 @@ export const SuratPage: React.FC = () => {
                     <tr>
                       <td className="py-0.5 text-slate-600">Alamat Domisili</td>
                       <td>:</td>
-                      <td>{selectedSurat.blokRumah}, RT 05 / RW 02 Kel. Sukamaju</td>
+                      <td>{selectedSurat.blokRumah}, {config.displayTitle} Kel. {config.namaKelurahan}</td>
                     </tr>
                     <tr>
                       <td className="py-0.5 text-slate-600">Jenis Permohonan</td>
@@ -529,9 +531,9 @@ export const SuratPage: React.FC = () => {
                   {/* Pengesahan Ketua RT */}
                   <div className="text-center font-sans">
                     <p className="text-xs mb-1">
-                      Depok, {new Date(selectedSurat.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {config.namaKota.replace(/^(Kota|Kabupaten)\s+/i, '')}, {new Date(selectedSurat.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
-                    <p className="text-xs font-bold mb-4">Ketua RT 05 / RW 02</p>
+                    <p className="text-xs font-bold mb-4">Ketua {config.displayTitle}</p>
 
                     {/* Cap & Tanda Tangan Visual */}
                     <div className="relative py-2 flex items-center justify-center">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, KeyRound, ArrowRight, QrCode, FileText, Wallet, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
+import { useRtConfig } from '../../context/rt-config-context.js';
 import { Button, notify } from '@simrt/ui-kit';
 import { AppLogo } from '../../components/AppLogo.js';
 
@@ -10,6 +11,7 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
   const { login, loginWithRecovery } = useAuth();
+  const { config } = useRtConfig();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
@@ -63,7 +65,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
         <div className="lg:col-span-7 space-y-6 hidden lg:block">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-950/80 border border-teal-500/30 text-teal-300 text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-            Portal Layanan Resmi Warga RT 05 / RW 02
+            Portal Layanan Resmi Warga {config.displayTitle}
           </div>
 
           <div className="space-y-3">
@@ -71,7 +73,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
               <AppLogo size="lg" />
               <div>
                 <h1 className="text-2xl font-black text-white tracking-tight">SIM-RT WARGA ONLINE</h1>
-                <p className="text-xs text-teal-400 font-medium">Kel. Sukamaju, Kec. Cilodong, Kota Depok</p>
+                <p className="text-xs text-teal-400 font-medium">{config.displaySub}</p>
               </div>
             </div>
             <p className="text-slate-300 text-sm leading-relaxed">
@@ -120,7 +122,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
               <AppLogo size="xl" />
             </div>
             <h1 className="text-xl font-black text-white tracking-tight">SIM-RT WARGA</h1>
-            <p className="text-xs text-teal-400 font-medium">RT 05 / RW 02 Kel. Sukamaju, Cilodong</p>
+            <p className="text-xs text-teal-400 font-medium">{config.displayFull}</p>
           </div>
 
           {/* Login Card */}

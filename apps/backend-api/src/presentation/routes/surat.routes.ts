@@ -325,6 +325,12 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       const verificationUrl = `${process.env.API_URL || 'http://localhost:3001'}/api/v1/surat/verify/${verificationHash}`;
       const tanggalSurat = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
+      const ketuaUser = await prisma.user.findFirst({
+        where: { role: 'KETUA_RT' },
+        include: { warga: true },
+      });
+      const namaKetuaRt = ketuaUser?.warga?.namaLengkap || 'Ketua RT';
+
       const pdfBuffer = await pdfService.generateSuratPengantarPdf({
         nomorSurat: nomorSuratResmi,
         namaWarga: surat.pemohonWarga.namaLengkap,
@@ -336,9 +342,15 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
         jenisSurat: surat.jenisSurat.namaSurat,
         keperluan: surat.keperluan,
         tanggalSurat,
-        namaKetuaRt: 'Bambang Pamungkas, S.T.',
+        namaKetuaRt,
         signatureHex,
         verificationUrl,
+        kodeRt: rtConfig?.kodeRt,
+        kodeRw: rtConfig?.kodeRw,
+        namaKelurahan: rtConfig?.namaKelurahan,
+        namaKecamatan: rtConfig?.namaKecamatan,
+        namaKota: rtConfig?.namaKota,
+        kodePos: rtConfig?.kodePos,
       });
 
       // 4. Save to MinIO
@@ -434,7 +446,7 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
         namaPemohonMasked: surat.pemohonWarga.namaLengkap.replace(/(?<=.).(?=.)/g, '*'),
         nikMasked: surat.pemohonWarga.nikMasked,
         tanggalTerbit: surat.updatedAt.toISOString(),
-        instansi: 'Rukun Tetangga 05 / RW 02 Sukamaju, Depok',
+        instansi: `Rukun Tetangga ${rtConfig?.kodeRt || '05'} / RW ${rtConfig?.kodeRw || '02'} ${rtConfig?.namaKelurahan || 'Sukamaju'}, ${rtConfig?.namaKota || 'Depok'}`,
       },
       timestamp: new Date().toISOString(),
     });

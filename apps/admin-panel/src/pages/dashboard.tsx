@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { useAuth } from '../context/auth-context.js';
+import { useRtConfig } from '../context/rt-config-context.js';
 import type { AdminTab } from '../components/layout/sidebar.js';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, formatGolDarah } from '@simrt/ui-kit';
 
@@ -43,6 +44,7 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) => {
   const { user } = useAuth();
+  const { config } = useRtConfig();
   const [mapData, setMapData] = useState<BlockMapHouse[]>([]);
   const [selectedHouse, setSelectedHouse] = useState<BlockMapHouse | null>(null);
   const [filterMode, setFilterMode] = useState<'ALL' | 'VULNERABILITY' | 'IURAN'>('ALL');
@@ -140,7 +142,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
               <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-800 text-teal-300 border border-slate-700">
                 Selamat Datang, {user?.namaLengkap || 'Pengurus RT'}
               </span>
-              <span className="text-xs text-slate-400 font-mono">RT 05 / RW 02 Depok</span>
+              <span className="text-xs text-slate-400 font-mono">{config.displayTitle} {config.namaKota}</span>
             </div>
             <h2 className="text-xl md:text-2xl font-black mt-2 tracking-tight">
               Pusat Pelayanan & Antrean Administrasi Warga

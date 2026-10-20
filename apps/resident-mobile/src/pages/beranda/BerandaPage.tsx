@@ -14,8 +14,10 @@ import {
   UserCheck,
   AlertCircle,
   PhoneCall,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
+import { useRtConfig } from '../../context/rt-config-context.js';
 import { mobileApi } from '../../services/api.js';
 import { Card, CardContent, Badge, Button } from '@simrt/ui-kit';
 import { EmergencyContactsDrawer } from '../../components/EmergencyContactsDrawer.js';
@@ -27,6 +29,7 @@ interface BerandaPageProps {
 
 export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
   const { user } = useAuth();
+  const { config } = useRtConfig();
   const [emergencyDrawerOpen, setEmergencyDrawerOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'SEMUA' | 'KEBERSIHAN' | 'SOSIAL' | 'KEAMANAN'>('SEMUA');
   const [iuranStatus, setIuranStatus] = useState<{ isPaid: boolean; bulan: string; nominal: number } | null>(null);
@@ -116,7 +119,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
           <div className="lg:col-span-7 space-y-2.5">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-teal-300 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>{todayFormatted} • RT 05 / RW 02 Sukamaju</span>
+              <span>{todayFormatted} • {config.displayTitle} {config.namaKelurahan}</span>
             </div>
 
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
@@ -134,10 +137,10 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 block">
-                    IDENTITAS RESMI WARGA
+                    {user?.role && user.role !== 'WARGA' ? `AKUN RESMI ${user.role}` : 'IDENTITAS RESMI WARGA'}
                   </span>
                   <h3 className="text-base font-black text-white tracking-wide mt-0.5">
-                    {user?.blokRumah || 'Kavling Blok RT 05'}
+                    {user?.blokRumah || config.displayTitle}
                   </h3>
                   <p className="text-xs text-slate-300 font-medium">
                     {user?.namaLengkap || user?.username}
@@ -165,6 +168,37 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
           </div>
         </div>
       </div>
+
+      {/* Pengurus RT / Admin Quick Launch Banner */}
+      {user?.role && user.role !== 'WARGA' && (
+        <div className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-950 p-4 sm:p-5 rounded-2xl border border-teal-500/40 shadow-sm animate-rise-in text-white space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-black tracking-wider bg-teal-500 text-slate-950 uppercase">
+                  {user.role}
+                </span>
+                <span className="text-xs text-teal-300 font-semibold">
+                  Akses Pengurus {config.displayTitle}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300">
+                Anda masuk dengan akun pengurus ({user.role}). Anda dapat menggunakan aplikasi ini untuk keperluan keluarga Anda, atau beralih ke Web Admin Panel untuk verifikasi surat dan pembukuan kas.
+              </p>
+            </div>
+
+            <a
+              href="https://rt-management-admin.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs transition-all shadow-sm shrink-0 active:scale-95"
+            >
+              <span>Buka Admin Panel</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* 2. Quick Actions 4 Civic Services */}
       <div className="space-y-3">

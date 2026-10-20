@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/auth-context.js';
+import { RtConfigProvider, useRtConfig } from './context/rt-config-context.js';
 import { BottomNavigation, TabType } from './components/BottomNavigation.js';
 import { AppLogo } from './components/AppLogo.js';
 import { AppToaster, OfflineModeBanner, useSSE } from '@simrt/ui-kit';
@@ -36,9 +37,20 @@ const MobileTabFallback: React.FC = () => (
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading, token, user, logout } = useAuth();
+  const { config } = useRtConfig();
   const [authView, setAuthView] = useState<'LOGIN' | 'ACTIVATION'>('LOGIN');
   const [activeTab, setActiveTab] = useState<TabType>('beranda');
   const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  const roleLabel = user?.role === 'SUPERUSER'
+    ? 'SUPERUSER'
+    : user?.role === 'KETUA_RT'
+    ? 'KETUA RT'
+    : user?.role === 'SEKRETARIS'
+    ? 'SEKRETARIS'
+    : user?.role === 'BENDAHARA'
+    ? 'BENDAHARA'
+    : (user?.blokRumah || 'Warga');
 
   // SSE Real-Time listener for resident notifications & API endpoint
   const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -119,10 +131,10 @@ const MainLayout: React.FC = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-black tracking-tight text-slate-900 dark:text-white truncate">
-                  SIM-RT 05
+                  SIM-{config.displayTitle}
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-950/80 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 shrink-0">
-                  {user?.blokRumah || 'Warga'}
+                  {roleLabel}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
@@ -160,7 +172,7 @@ const MainLayout: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 whitespace-nowrap">
-                <MapPin className="w-3 h-3 text-teal-600 shrink-0" /> RT 05 / RW 02 Sukamaju, Cilodong
+                <MapPin className="w-3 h-3 text-teal-600 shrink-0" /> {config.displaySub}
               </p>
             </div>
           </div>
@@ -209,7 +221,7 @@ const MainLayout: React.FC = () => {
                   {user?.namaLengkap || user?.username}
                 </span>
                 <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold block leading-none truncate">
-                  {user?.blokRumah || 'Warga RT 05'}
+                  {roleLabel}
                 </span>
               </div>
             </div>
@@ -242,7 +254,7 @@ const MainLayout: React.FC = () => {
       {/* Desktop Civic Footer */}
       <footer className="hidden md:block border-t border-slate-200 dark:border-slate-800 py-4 bg-white/50 dark:bg-slate-900/50 text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <p>© 2026 Rukun Tetangga 05 / RW 02 Kelurahan Sukamaju, Kecamatan Cilodong, Kota Depok</p>
+          <p>© 2026 {config.displayFull}</p>
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -272,7 +284,9 @@ const MainLayout: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <MainLayout />
+      <RtConfigProvider>
+        <MainLayout />
+      </RtConfigProvider>
     </AuthProvider>
   );
 };

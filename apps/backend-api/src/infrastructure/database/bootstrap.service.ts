@@ -1,8 +1,41 @@
 import { hash } from '@node-rs/argon2';
 import { EnvelopeCryptoAdapter } from '../crypto/envelope-crypto.adapter.js';
 import { HmacBlindIndexAdapter } from '../crypto/blind-index.adapter.js';
+import { Ed25519SignerAdapter } from '../crypto/ed25519-signer.adapter.js';
 
 export class BootstrapService {
+  /**
+   * Ensures RT Identity configuration exists and can be updated dynamically
+   */
+  public static async ensureRtConfig(prisma: any, customData?: any): Promise<any> {
+    if (!prisma) return null;
+    let config = await prisma.rukunTetanggaConfig.findFirst();
+    if (!config) {
+      const signer = new Ed25519SignerAdapter();
+      const cryptoAdapter = new EnvelopeCryptoAdapter();
+      const { publicKeyPem, privateKeyPem } = signer.generateKeyPair();
+      const encryptedPrivateKey = cryptoAdapter.encryptField(privateKeyPem);
+
+      config = await prisma.rukunTetanggaConfig.create({
+        data: {
+          kodeRt: customData?.kodeRt || '010',
+          kodeRw: customData?.kodeRw || '003',
+          namaKelurahan: customData?.namaKelurahan || 'Taman Bunga',
+          namaKecamatan: customData?.namaKecamatan || 'Gerunggang',
+          namaKota: customData?.namaKota || 'Kota Pangkalpinang',
+          kodePos: customData?.kodePos || '33119',
+          ed25519PublicKey: publicKeyPem,
+          ed25519PrivateKeyEnc: encryptedPrivateKey,
+        },
+      });
+    } else if (customData) {
+      config = await prisma.rukunTetanggaConfig.update({
+        where: { id: config.id },
+        data: customData,
+      });
+    }
+    return config;
+  }
   /**
    * Provisions or ensures a root SUPERUSER account exists in the database
    */

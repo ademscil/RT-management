@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Bell, Radio } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
+import { useRtConfig } from '../../context/rt-config-context.js';
 import { useSSE, Badge } from '@simrt/ui-kit';
 import { API_ORIGIN } from '../../services/api.js';
 
 export const Header: React.FC = () => {
   const { token, user } = useAuth();
+  const { config } = useRtConfig();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
 
   const { isConnected, unreadCount, clearUnreadCount } = useSSE({
@@ -26,12 +28,12 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            Rukun Tetangga 05 / RW 02
+            {config.displayTitle}
             <Badge variant="success" className="text-[10px] py-0">
               Data Resmi RT
             </Badge>
           </h2>
-          <p className="text-xs text-slate-500">Kel. Sukamaju, Kec. Cilodong, Kota Depok</p>
+          <p className="text-xs text-slate-500">{config.displaySub}</p>
         </div>
       </div>
 

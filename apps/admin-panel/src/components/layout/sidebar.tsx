@@ -6,11 +6,13 @@ import {
   Wallet,
   QrCode,
   ShieldCheck,
+  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/auth-context.js';
+import { useRtConfig } from '../../context/rt-config-context.js';
 import { AppLogo } from '../AppLogo.js';
 
 export type AdminTab =
@@ -19,7 +21,8 @@ export type AdminTab =
   | 'surat'
   | 'keuangan'
   | 'onboarding'
-  | 'audit';
+  | 'audit'
+  | 'pengaturan';
 
 interface SidebarProps {
   activeTab: AdminTab;
@@ -42,6 +45,7 @@ interface NavSection {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const { user, logout } = useAuth();
+  const { config } = useRtConfig();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navSections: NavSection[] = [
@@ -103,6 +107,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         },
       ],
     },
+    {
+      title: 'PENGATURAN SISTEM',
+      items: [
+        {
+          id: 'pengaturan',
+          label: 'Profil & Identitas RT',
+          icon: <Settings className="w-4 h-4" />,
+          iconColor: 'text-cyan-400',
+          iconBg: 'bg-cyan-950/60',
+          iconBorder: 'border-cyan-700/60',
+        },
+      ],
+    },
   ];
 
   const roleLabel: Record<string, string> = {
@@ -127,8 +144,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             <AppLogo size="sm" />
             {!isCollapsed && (
               <div className="truncate">
-                <h1 className="text-sm font-bold text-white tracking-wide">SIM-RT 05 / RW 02</h1>
-                <p className="text-[11px] text-teal-400 font-medium">Kel. Sukamaju, Depok</p>
+                <h1 className="text-sm font-bold text-white tracking-wide truncate">{config.displayTitle}</h1>
+                <p className="text-[11px] text-teal-400 font-medium truncate">{config.displaySub}</p>
               </div>
             )}
           </div>

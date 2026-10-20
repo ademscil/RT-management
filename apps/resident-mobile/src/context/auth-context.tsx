@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       username: res.user.username,
       role: res.user.role,
       namaLengkap: res.user.namaLengkap || res.user.username,
-      blokRumah: res.user.blokRumah || 'Blok RT 05',
+      blokRumah: res.user.blokRumah || (res.user.role === 'SUPERUSER' ? 'Superuser' : res.user.role !== 'WARGA' ? res.user.role : 'Warga RT'),
     };
 
     setAuthSession(res.accessToken, residentUser);
@@ -115,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       username: res.user.username,
       role: res.user.role,
       namaLengkap: res.user.namaLengkap || res.user.username,
-      blokRumah: res.user.blokRumah || 'Blok RT 05',
+      blokRumah: res.user.blokRumah || (res.user.role === 'SUPERUSER' ? 'Superuser' : res.user.role !== 'WARGA' ? res.user.role : 'Warga RT'),
     };
 
     setAuthSession(res.accessToken, residentUser);

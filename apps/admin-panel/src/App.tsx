@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/auth-context.js';
+import { RtConfigProvider } from './context/rt-config-context.js';
 import { Sidebar, type AdminTab } from './components/layout/sidebar.js';
 import { Header } from './components/layout/header.js';
 import { AppToaster, AppErrorBoundary, OfflineModeBanner } from '@simrt/ui-kit';
@@ -12,6 +13,7 @@ const SuratPage = lazy(() => import('./pages/surat.js').then((m) => ({ default: 
 const KeuanganPage = lazy(() => import('./pages/keuangan.js').then((m) => ({ default: m.KeuanganPage })));
 const OnboardingPage = lazy(() => import('./pages/onboarding.js').then((m) => ({ default: m.OnboardingPage })));
 const AuditPage = lazy(() => import('./pages/audit.js').then((m) => ({ default: m.AuditPage })));
+const PengaturanPage = lazy(() => import('./pages/pengaturan.js').then((m) => ({ default: m.PengaturanPage })));
 const LoginPage = lazy(() => import('./pages/login.js').then((m) => ({ default: m.LoginPage })));
 
 const ModuleFallback: React.FC = () => (
@@ -75,6 +77,7 @@ const MainLayout: React.FC = () => {
               {activeTab === 'keuangan' && <KeuanganPage />}
               {activeTab === 'onboarding' && <OnboardingPage />}
               {activeTab === 'audit' && <AuditPage />}
+              {activeTab === 'pengaturan' && <PengaturanPage />}
             </Suspense>
           </AppErrorBoundary>
         </main>
@@ -89,7 +92,9 @@ export const App: React.FC = () => {
   return (
     <AppErrorBoundary fallbackTitle="Terjadi Masalah Fatal pada Aplikasi">
       <AuthProvider>
-        <MainLayout />
+        <RtConfigProvider>
+          <MainLayout />
+        </RtConfigProvider>
       </AuthProvider>
     </AppErrorBoundary>
   );

@@ -13,6 +13,7 @@ import { operasionalRoutes } from './routes/operasional.routes.js';
 import { notificationRoutes } from './routes/notifications.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { onboardingRoutes } from './routes/onboarding.routes.js';
+import { configRoutes } from './routes/config.routes.js';
 import { PrismaService } from '../infrastructure/database/prisma.service.js';
 import { BootstrapService } from '../infrastructure/database/bootstrap.service.js';
 import { ErrorCode } from '@simrt/shared-types';
@@ -77,6 +78,20 @@ export function createServer(): FastifyInstance {
           const su = await BootstrapService.ensureSuperuser(prisma);
           superuserStatus = su.created ? 'created' : 'ready';
 
+          // Automatically ensure active RT Configuration
+          let rtCustom;
+          if (req.query?.set_rt_pangkalpinang === '1') {
+            rtCustom = {
+              kodeRt: '010',
+              kodeRw: '003',
+              namaKelurahan: 'Taman Bunga',
+              namaKecamatan: 'Gerunggang',
+              namaKota: 'Kota Pangkalpinang',
+              kodePos: '33119',
+            };
+          }
+          await BootstrapService.ensureRtConfig(prisma, rtCustom);
+
           // Purge dummy demo data if explicitly requested
           if (req.query?.purge_dummy === '1') {
             const p = await BootstrapService.purgeDummyData(prisma);
@@ -109,6 +124,7 @@ export function createServer(): FastifyInstance {
   app.register(notificationRoutes, { prefix: '/api/v1/notifications' });
   app.register(auditRoutes, { prefix: '/api/v1/audit' });
   app.register(onboardingRoutes, { prefix: '/api/v1/onboarding' });
+  app.register(configRoutes, { prefix: '/api/v1/config' });
 
   // 7. Standardized Error Handling
   app.setErrorHandler((error: any, _request, reply) => {

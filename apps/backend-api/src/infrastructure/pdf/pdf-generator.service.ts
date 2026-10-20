@@ -22,6 +22,12 @@ export interface SuratPengantarParams {
   namaKetuaRt: string;
   signatureHex: string;
   verificationUrl: string;
+  kodeRt?: string;
+  kodeRw?: string;
+  namaKelurahan?: string;
+  namaKecamatan?: string;
+  namaKota?: string;
+  kodePos?: string;
 }
 
 export interface KwitansiParams {
@@ -33,6 +39,9 @@ export interface KwitansiParams {
   tanggalBayar: string;
   namaBendahara: string;
   hashReference: string;
+  kodeRt?: string;
+  kodeRw?: string;
+  namaKota?: string;
 }
 
 export class PdfGeneratorService {
@@ -170,8 +179,15 @@ export class PdfGeneratorService {
     const left = 50;
     let y = 790;
 
+    const rtStr = params.kodeRt || '05';
+    const rwStr = params.kodeRw || '02';
+    const kelurahanStr = (params.namaKelurahan || 'Sukamaju').toUpperCase();
+    const kecamatanStr = (params.namaKecamatan || 'Cilodong').toUpperCase();
+    const kotaStr = (params.namaKota || 'Kota Depok').toUpperCase();
+    const kodePosStr = params.kodePos || '16415';
+
     // Kop Surat
-    page.drawText('RUKUN TETANGGA 05 / RUKUN WARGA 02', {
+    page.drawText(`RUKUN TETANGGA ${rtStr} / RUKUN WARGA ${rwStr}`, {
       x: 150,
       y,
       size: 14,
@@ -179,16 +195,16 @@ export class PdfGeneratorService {
       color: rgb(0.06, 0.46, 0.43),
     });
     y -= 18;
-    page.drawText('KELURAHAN SUKAMAJU, KECAMATAN CILODONG, KOTA DEPOK', {
-      x: 130,
+    page.drawText(`KELURAHAN ${kelurahanStr}, KECAMATAN ${kecamatanStr}, ${kotaStr}`, {
+      x: 100,
       y,
-      size: 10,
+      size: 9.5,
       font: fontBold,
       color: rgb(0.2, 0.2, 0.2),
     });
     y -= 14;
-    page.drawText('Sekretariat: Pos RT 05/02 Cilodong, Depok - Kode Pos 16415', {
-      x: 165,
+    page.drawText(`Sekretariat: Pos RT ${rtStr}/${rwStr} ${params.namaKecamatan || 'Cilodong'}, ${params.namaKota || 'Depok'} - Kode Pos ${kodePosStr}`, {
+      x: 130,
       y,
       size: 8.5,
       font,
@@ -224,7 +240,7 @@ export class PdfGeneratorService {
 
     // Pembuka
     y -= 35;
-    page.drawText('Yang bertanda tangan di bawah ini Ketua RT 05 / RW 02 menerangkan bahwa:', {
+    page.drawText(`Yang bertanda tangan di bawah ini Ketua RT ${rtStr} / RW ${rwStr} menerangkan bahwa:`, {
       x: left,
       y,
       size: 10,
@@ -265,7 +281,8 @@ export class PdfGeneratorService {
 
     // Tanda Tangan & QR Verification
     y -= 45;
-    page.drawText(`Depok, ${params.tanggalSurat}`, {
+    const kotaNama = params.namaKota || 'Depok';
+    page.drawText(`${kotaNama}, ${params.tanggalSurat}`, {
       x: 380,
       y,
       size: 9.5,
@@ -273,7 +290,7 @@ export class PdfGeneratorService {
       color: rgb(0.15, 0.15, 0.15),
     });
     y -= 15;
-    page.drawText('Ketua RT 05 / RW 02,', {
+    page.drawText(`Ketua RT ${rtStr} / RW ${rwStr},`, {
       x: 380,
       y,
       size: 9.5,
@@ -347,8 +364,11 @@ export class PdfGeneratorService {
       color: rgb(1, 1, 1),
     });
 
+    const rtStr = params.kodeRt || '05';
+    const rwStr = params.kodeRw || '02';
+
     // Header
-    page.drawText('KWITANSI PEMBAYARAN IURAN RT 05/RW 02', {
+    page.drawText(`KWITANSI PEMBAYARAN IURAN RT ${rtStr}/RW ${rwStr}`, {
       x: 25,
       y: 260,
       size: 12,

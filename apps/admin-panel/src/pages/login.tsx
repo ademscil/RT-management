@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/auth-context.js';
+import { useRtConfig } from '../context/rt-config-context.js';
 import { Button, notify } from '@simrt/ui-kit';
 import { AppLogo } from '../components/AppLogo.js';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
+  const { config } = useRtConfig();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +46,7 @@ export const LoginPage: React.FC = () => {
             <AppLogo size="xl" />
           </div>
           <h1 className="text-xl font-black text-white tracking-tight">SIM-RT COMMAND CENTER</h1>
-          <p className="text-xs text-teal-400 font-medium">RT 05 / RW 02 Kel. Sukamaju, Cilodong, Depok</p>
+          <p className="text-xs text-teal-400 font-medium">{config.displayFull}</p>
         </div>
 
         {/* Login Card */}
