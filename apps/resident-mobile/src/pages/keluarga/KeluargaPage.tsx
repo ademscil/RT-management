@@ -17,6 +17,9 @@ import {
   Badge,
   PiiRevealModal,
   notify,
+  formatGender,
+  formatGolDarah,
+  formatHubunganKeluarga,
 } from '@simrt/ui-kit';
 import { IdCardScannerModal } from '../../components/IdCardScannerModal.js';
 
@@ -76,11 +79,11 @@ export const KeluargaPage: React.FC = () => {
               namaLengkap: w.namaLengkap,
               nikMasked: w.nikMasked,
               hubunganKeluarga: w.hubunganKeluarga,
-              jenisKelamin: w.jenisKelamin,
+              jenisKelamin: w.gender || w.jenisKelamin,
               tempatLahir: w.tempatLahir,
               tanggalLahir: w.tanggalLahir,
               golonganDarah: w.golonganDarah,
-              statusKeluarga: w.hubunganKeluarga === 'KEPALA_KELUARGA' ? 'Kepala Keluarga' : w.hubunganKeluarga,
+              statusKeluarga: formatHubunganKeluarga(w.hubunganKeluarga),
             })),
           });
         }
@@ -250,11 +253,11 @@ export const KeluargaPage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
                       <div>
                         <span className="text-[10px] text-slate-400 block">Jenis Kelamin:</span>
-                        <strong>{w.jenisKelamin === 'L' ? 'Laki-Laki' : 'Perempuan'}</strong>
+                        <strong>{formatGender(w.jenisKelamin)}</strong>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block">Gol. Darah:</span>
-                        <strong>{w.golonganDarah || '-'}</strong>
+                        <strong>{formatGolDarah(w.golonganDarah)}</strong>
                       </div>
                     </div>
 
@@ -317,7 +320,7 @@ export const KeluargaPage: React.FC = () => {
 
       {/* Show Revealed NIK dialog */}
       {revealedPii && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center gap-2.5 text-teal-700">
               <Shield className="w-5 h-5" />
@@ -348,7 +351,7 @@ export const KeluargaPage: React.FC = () => {
 
       {/* Offline Recovery Reminder Modal */}
       {recoveryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">

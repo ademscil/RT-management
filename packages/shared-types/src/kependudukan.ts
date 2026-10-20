@@ -121,3 +121,102 @@ export const RumahKavlingQueryFilterSchema = PaginationQuerySchema.extend({
 });
 export type RumahKavlingQueryFilter = z.infer<typeof RumahKavlingQueryFilterSchema>;
 
+// ==========================================
+// CANONICAL CIVIC DATA FORMATTERS (WCAG & PDP)
+// ==========================================
+
+export function formatGender(val?: string | null): string {
+  if (!val) return '-';
+  const norm = val.toUpperCase().trim();
+  if (norm === 'LAKI_LAKI' || norm === 'L' || norm === 'LAKI-LAKI' || norm === 'MALE') return 'Laki-Laki';
+  if (norm === 'PEREMPUAN' || norm === 'P' || norm === 'FEMALE') return 'Perempuan';
+  return val;
+}
+
+export function formatGolDarah(val?: string | null): string {
+  if (!val || val === 'TIDAK_TAHU') return '-';
+  return val.replace('_POSITIF', '+').replace('_NEGATIF', '-');
+}
+
+export function formatHubunganKeluarga(val?: string | null): string {
+  if (!val) return '-';
+  const map: Record<string, string> = {
+    KEPALA_KELUARGA: 'Kepala Keluarga',
+    SUAMI: 'Suami',
+    ISTRI: 'Istri',
+    ANAK: 'Anak',
+    MENANTU: 'Menantu',
+    CUCU: 'Cucu',
+    ORANG_TUA: 'Orang Tua',
+    MERTUA: 'Mertua',
+    FAMILI_LAIN: 'Famili Lain',
+    PEMBANTU: 'Pembantu',
+    LAINNYA: 'Lainnya',
+  };
+  return map[val] || val.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
+export function formatAgama(val?: string | null): string {
+  if (!val) return '-';
+  const map: Record<string, string> = {
+    ISLAM: 'Islam',
+    KRISTEN: 'Kristen',
+    KATOLIK: 'Katolik',
+    HINDU: 'Hindu',
+    BUDDHA: 'Buddha',
+    KHONGHUCU: 'Khonghucu',
+    PENGHAYAT: 'Penghayat Kepercayaan',
+  };
+  return map[val] || val;
+}
+
+export function formatStatusPerkawinan(val?: string | null): string {
+  if (!val) return '-';
+  const map: Record<string, string> = {
+    BELUM_KAWIN: 'Belum Kawin',
+    KAWIN: 'Kawin',
+    CERAI_HIDUP: 'Cerai Hidup',
+    CERAI_MATI: 'Cerai Mati',
+  };
+  return map[val] || val;
+}
+
+export function formatStatusKependudukan(val?: string | null): string {
+  if (!val) return '-';
+  const map: Record<string, string> = {
+    TETAP: 'Warga Tetap',
+    KONTRAK: 'Warga Kontrak',
+    KOS: 'Warga Kos',
+  };
+  return map[val] || val;
+}
+
+export function formatDateIndo(dateStr?: string | Date | null): string {
+  if (!dateStr) return '-';
+  try {
+    const raw = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return String(dateStr);
+    return new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(d);
+  } catch {
+    return String(dateStr);
+  }
+}
+
+export function formatDateInput(dateStr?: string | Date | null): string {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string') {
+    return dateStr.split('T')[0];
+  }
+  try {
+    return dateStr.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+}
+
+

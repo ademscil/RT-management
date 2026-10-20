@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FileText,
   CheckCircle2,
@@ -417,8 +418,8 @@ export const SuratPage: React.FC = () => {
       </Card>
 
       {/* MODAL 1: A4 Surat Fisik Preview & Signing Modal */}
-      {previewModalOpen && selectedSurat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in overflow-y-auto">
+      {previewModalOpen && selectedSurat && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col my-8 overflow-hidden">
             {/* Top Toolbar */}
             <div className="px-6 py-3.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -539,8 +540,11 @@ export const SuratPage: React.FC = () => {
 
             {/* Modal Bottom Actions Bar */}
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-xs text-slate-600 dark:text-slate-400">
-                Status: <strong className="text-slate-900 dark:text-slate-100">{selectedSurat.status}</strong>
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <span>Status:</span>
+                <Badge variant={statusBadges[selectedSurat.status]?.variant || 'default'}>
+                  {statusBadges[selectedSurat.status]?.label || selectedSurat.status}
+                </Badge>
               </div>
 
               <div className="flex items-center gap-2">
@@ -586,12 +590,13 @@ export const SuratPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: Buat Surat Langsung (Walk-In Offline Resident) */}
-      {walkinModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+      {walkinModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -668,7 +673,8 @@ export const SuratPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

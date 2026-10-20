@@ -13,3 +13,14 @@ export * from './components/destructive-action-dialog.js';
 export * from './components/forensic-watermarked-image-viewer.js';
 export * from './components/app-error-boundary.js';
 export * from './components/offline-mode-banner.js';
+export {
+  formatGender,
+  formatGolDarah,
+  formatHubunganKeluarga,
+  formatAgama,
+  formatStatusPerkawinan,
+  formatStatusKependudukan,
+  formatDateIndo,
+  formatDateInput,
+} from '@simrt/shared-types';
+

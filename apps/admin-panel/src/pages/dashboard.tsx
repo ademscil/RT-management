@@ -15,7 +15,7 @@ import {
 import { api } from '../services/api.js';
 import { useAuth } from '../context/auth-context.js';
 import type { AdminTab } from '../components/layout/sidebar.js';
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@simrt/ui-kit';
+import { Card, CardHeader, CardTitle, CardContent, Badge, Button, formatGolDarah } from '@simrt/ui-kit';
 
 interface BlockMapHouse {
   id: string;
@@ -577,7 +577,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
                         <p className="text-slate-500">{d.blokRumah}</p>
                       </div>
                       <Badge variant="destructive" className="font-mono">
-                        {d.golonganDarah.replace('_POSITIF', '+')}
+                        {formatGolDarah(d.golonganDarah)}
                       </Badge>
                     </div>
                   ))}

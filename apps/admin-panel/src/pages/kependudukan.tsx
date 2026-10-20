@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users,
   Home,
@@ -29,6 +30,11 @@ import {
   SkeletonTable,
   EmptyStateCard,
   notify,
+  formatGender,
+  formatGolDarah,
+  formatHubunganKeluarga,
+  formatDateIndo,
+  formatDateInput,
 } from '@simrt/ui-kit';
 import type { PaginationMeta, PiiAccessReason } from '@simrt/shared-types';
 
@@ -229,6 +235,9 @@ export const KependudukanPage: React.FC = () => {
         title: 'Akun Login Warga Aktif',
         description: `Akun "${akunUsername.trim().toLowerCase()}" berhasil dibuatkan untuk ${targetAkunWarga.namaLengkap}. Warga dapat langsung login ke aplikasi mobile.`,
       });
+
+      await fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
+      await fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
     } catch (err: any) {
       notify.error({ title: 'Gagal Membuat Akun Login', description: err.message });
     } finally {
@@ -449,8 +458,8 @@ export const KependudukanPage: React.FC = () => {
         description: `Data ${formNama} telah tersimpan dan terhubung ke Kartu Keluarga.`,
       });
 
-      fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
-      fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
+      await fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
+      await fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
     } catch (err: any) {
       notify.error({ title: 'Gagal Menambahkan Warga', description: err.message });
     } finally {
@@ -462,7 +471,7 @@ export const KependudukanPage: React.FC = () => {
     setEditingWargaId(w.id);
     setEditFormNama(w.namaLengkap);
     setEditFormTempatLahir(w.tempatLahir || 'Depok');
-    setEditFormTanggalLahir(w.tanggalLahir || '1990-01-01');
+    setEditFormTanggalLahir(formatDateInput(w.tanggalLahir) || '1990-01-01');
     setEditFormGender((w as any).gender || (w as any).jenisKelamin || 'LAKI_LAKI');
     setEditFormGolDarah(w.golonganDarah || 'O_POSITIF');
     setEditFormAgama(w.agama || 'ISLAM');
@@ -507,8 +516,8 @@ export const KependudukanPage: React.FC = () => {
         description: `Informasi ${editFormNama} berhasil disimpan ke Buku Induk.`,
       });
 
-      fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
-      fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
+      await fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
+      await fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
     } catch (err: any) {
       notify.error({ title: 'Gagal Memperbarui Warga', description: err.message });
     } finally {
@@ -528,7 +537,8 @@ export const KependudukanPage: React.FC = () => {
         description: `${namaWarga} berhasil dihapus dari Kartu Keluarga.`,
       });
 
-      fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
+      await fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
+      await fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
       fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
     } catch (err: any) {
       notify.error({ title: 'Gagal Menghapus Warga', description: err.message });
@@ -908,7 +918,7 @@ export const KependudukanPage: React.FC = () => {
                               <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">{w.namaLengkap}</div>
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <Badge variant={w.hubunganKeluarga === 'KEPALA_KELUARGA' ? 'default' : 'outline'} className="text-[10px]">
-                                  {w.hubunganKeluarga.replace('_', ' ')}
+                                  {formatHubunganKeluarga(w.hubunganKeluarga)}
                                 </Badge>
                                 {w.isLansia && <Badge variant="warning" className="text-[10px]">Lansia</Badge>}
                                 {w.isDisabilitas && <Badge variant="destructive" className="text-[10px]">Disabilitas</Badge>}
@@ -940,13 +950,13 @@ export const KependudukanPage: React.FC = () => {
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <div>{w.tempatLahir}, {w.tanggalLahir}</div>
-                              <span className="text-[11px] text-slate-500">{w.gender === 'LAKI_LAKI' ? 'Laki-Laki' : 'Perempuan'}</span>
+                              <div>{w.tempatLahir}, {formatDateIndo(w.tanggalLahir)}</div>
+                              <span className="text-[11px] text-slate-500">{formatGender(w.gender)}</span>
                             </td>
 
                             <td className="py-3.5 px-4">
                               <Badge variant="destructive" className="font-mono text-[10px]">
-                                {w.golonganDarah.replace('_POSITIF', '+').replace('_NEGATIF', '-')}
+                                {formatGolDarah(w.golonganDarah)}
                               </Badge>
                             </td>
 
@@ -1015,8 +1025,8 @@ export const KependudukanPage: React.FC = () => {
       {/* ========================================================= */}
       {/* MODAL 1: WORKBENCH KELOLA PENGHUNI RUMAH                  */}
       {/* ========================================================= */}
-      {houseWorkbenchOpen && selectedHouseKk && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in overflow-y-auto">
+      {houseWorkbenchOpen && selectedHouseKk && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden my-6">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
@@ -1094,7 +1104,7 @@ export const KependudukanPage: React.FC = () => {
                               variant={member.hubunganKeluarga === 'KEPALA_KELUARGA' ? 'default' : 'outline'}
                               className="text-[10px]"
                             >
-                              {member.hubunganKeluarga.replace('_', ' ')}
+                              {formatHubunganKeluarga(member.hubunganKeluarga)}
                             </Badge>
                             {member.isLansia && <Badge variant="warning" className="text-[10px]">Lansia</Badge>}
                             {member.isBalita && <Badge variant="outline" className="text-[10px] text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700">Balita</Badge>}
@@ -1103,9 +1113,11 @@ export const KependudukanPage: React.FC = () => {
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
                             <span className="font-mono">NIK: {member.nikMasked}</span>
                             <span>•</span>
-                            <span>{member.tempatLahir}, {member.tanggalLahir}</span>
+                            <span>{formatGender(member.gender || (member as any).jenisKelamin)}</span>
                             <span>•</span>
-                            <span>Gol. Darah: {member.golonganDarah.replace('_POSITIF', '+')}</span>
+                            <span>{member.tempatLahir}, {formatDateIndo(member.tanggalLahir)}</span>
+                            <span>•</span>
+                            <span>Gol. Darah: {formatGolDarah(member.golonganDarah)}</span>
                             <span>•</span>
                             <span>Pekerjaan: {member.pekerjaan || '-'}</span>
                           </div>
@@ -1147,14 +1159,15 @@ export const KependudukanPage: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================= */}
       {/* MODAL 2: TAMBAH BLOK RUMAH BARU                           */}
       {/* ========================================================= */}
-      {tambahRumahModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      {tambahRumahModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -1264,14 +1277,15 @@ export const KependudukanPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================= */}
       {/* MODAL 3: EDIT RUMAH / KAVLING                             */}
       {/* ========================================================= */}
-      {editRumahModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      {editRumahModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -1362,14 +1376,15 @@ export const KependudukanPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================= */}
       {/* MODAL 4: TAMBAH WARGA BARU (KE KK TERTENTU)               */}
       {/* ========================================================= */}
-      {tambahWargaModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      {tambahWargaModalOpen && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -1488,9 +1503,14 @@ export const KependudukanPage: React.FC = () => {
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-mono"
                   >
                     <option value="A_POSITIF">A+</option>
+                    <option value="A_NEGATIF">A-</option>
                     <option value="B_POSITIF">B+</option>
+                    <option value="B_NEGATIF">B-</option>
                     <option value="AB_POSITIF">AB+</option>
+                    <option value="AB_NEGATIF">AB-</option>
                     <option value="O_POSITIF">O+</option>
+                    <option value="O_NEGATIF">O-</option>
+                    <option value="TIDAK_TAHU">Tidak Tahu</option>
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -1503,10 +1523,15 @@ export const KependudukanPage: React.FC = () => {
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
                   >
                     <option value="KEPALA_KELUARGA">Kepala Keluarga</option>
+                    <option value="SUAMI">Suami</option>
                     <option value="ISTRI">Istri</option>
                     <option value="ANAK">Anak</option>
+                    <option value="MENANTU">Menantu</option>
+                    <option value="CUCU">Cucu</option>
                     <option value="ORANG_TUA">Orang Tua</option>
+                    <option value="MERTUA">Mertua</option>
                     <option value="FAMILI_LAIN">Famili Lain</option>
+                    <option value="LAINNYA">Lainnya</option>
                   </select>
                 </div>
               </div>
@@ -1537,7 +1562,8 @@ export const KependudukanPage: React.FC = () => {
                     <option value="KATOLIK">Katolik</option>
                     <option value="HINDU">Hindu</option>
                     <option value="BUDDHA">Buddha</option>
-                    <option value="KONGHUCU">Konghucu</option>
+                    <option value="KHONGHUCU">Khonghucu</option>
+                    <option value="PENGHAYAT">Penghayat Kepercayaan</option>
                   </select>
                 </div>
               </div>
@@ -1589,14 +1615,15 @@ export const KependudukanPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================= */}
       {/* MODAL 5: EDIT BIODATA WARGA                               */}
       {/* ========================================================= */}
-      {editWargaModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      {editWargaModalOpen && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -1676,9 +1703,14 @@ export const KependudukanPage: React.FC = () => {
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-mono"
                   >
                     <option value="A_POSITIF">A+</option>
+                    <option value="A_NEGATIF">A-</option>
                     <option value="B_POSITIF">B+</option>
+                    <option value="B_NEGATIF">B-</option>
                     <option value="AB_POSITIF">AB+</option>
+                    <option value="AB_NEGATIF">AB-</option>
                     <option value="O_POSITIF">O+</option>
+                    <option value="O_NEGATIF">O-</option>
+                    <option value="TIDAK_TAHU">Tidak Tahu</option>
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -1691,10 +1723,15 @@ export const KependudukanPage: React.FC = () => {
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none"
                   >
                     <option value="KEPALA_KELUARGA">Kepala Keluarga</option>
+                    <option value="SUAMI">Suami</option>
                     <option value="ISTRI">Istri</option>
                     <option value="ANAK">Anak</option>
+                    <option value="MENANTU">Menantu</option>
+                    <option value="CUCU">Cucu</option>
                     <option value="ORANG_TUA">Orang Tua</option>
+                    <option value="MERTUA">Mertua</option>
                     <option value="FAMILI_LAIN">Famili Lain</option>
+                    <option value="LAINNYA">Lainnya</option>
                   </select>
                 </div>
               </div>
@@ -1725,7 +1762,8 @@ export const KependudukanPage: React.FC = () => {
                     <option value="KATOLIK">Katolik</option>
                     <option value="HINDU">Hindu</option>
                     <option value="BUDDHA">Buddha</option>
-                    <option value="KONGHUCU">Konghucu</option>
+                    <option value="KHONGHUCU">Khonghucu</option>
+                    <option value="PENGHAYAT">Penghayat Kepercayaan</option>
                   </select>
                 </div>
               </div>
@@ -1777,7 +1815,8 @@ export const KependudukanPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================= */}
@@ -1797,8 +1836,8 @@ export const KependudukanPage: React.FC = () => {
       {/* ========================================================= */}
       {/* MODAL 7: PERIKSA BERKAS DOKUMEN KTP/KK                   */}
       {/* ========================================================= */}
-      {workbenchOpen && workbenchWarga && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+      {workbenchOpen && workbenchWarga && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-5xl h-[85vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
             {/* Top Bar */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
@@ -1845,12 +1884,12 @@ export const KependudukanPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-slate-400 font-semibold">Hubungan Keluarga</span>
-                      <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{workbenchWarga.hubunganKeluarga.replace('_', ' ')}</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{formatHubunganKeluarga(workbenchWarga.hubunganKeluarga)}</p>
                     </div>
                     <div>
                       <span className="text-slate-400 font-semibold">Tempat, Tanggal Lahir</span>
                       <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                        {workbenchWarga.tempatLahir}, {workbenchWarga.tanggalLahir}
+                        {workbenchWarga.tempatLahir}, {formatDateIndo(workbenchWarga.tanggalLahir)}
                       </p>
                     </div>
                     <div>
@@ -1898,13 +1937,14 @@ export const KependudukanPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* ========================================================= */}
       {/* MODAL 8: ATUR AKUN LOGIN WARGA                            */}
       {/* ========================================================= */}
-      {akunModalOpen && targetAkunWarga && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      {akunModalOpen && targetAkunWarga && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -1977,7 +2017,8 @@ export const KependudukanPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

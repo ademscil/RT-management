@@ -86,7 +86,7 @@ const MainLayout: React.FC = () => {
         ) : (
           <ActivationPage onBackToLogin={() => setAuthView('LOGIN')} />
         )}
-        <AppToaster position="top-center" />
+        <AppToaster position="top-center" offset={{ top: 20 }} />
       </Suspense>
     );
   }
@@ -248,7 +248,7 @@ const MainLayout: React.FC = () => {
         unreadCount={unreadCount}
       />
 
-      <AppToaster position="top-center" />
+      <AppToaster position="top-center" offset={{ top: 72 }} />
     </div>
   );
 };

@@ -86,18 +86,21 @@ export function useAppNotify() {
 }
 
 export interface AppToasterProps {
-  position?: 'top-center' | 'bottom-right' | 'top-right' | 'bottom-center';
+  position?: 'top-center' | 'bottom-right' | 'top-right' | 'bottom-center' | 'top-left' | 'bottom-left';
   expand?: boolean;
+  offset?: string | number | { top?: number | string; bottom?: number | string; left?: number | string; right?: number | string };
 }
 
 export const AppToaster: React.FC<AppToasterProps> = ({
   position = 'bottom-right',
   expand = true,
+  offset,
 }) => {
   return (
     <SonnerToaster
       position={position}
       expand={expand}
+      offset={offset}
       richColors
       closeButton
       style={{
