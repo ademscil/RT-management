@@ -84,9 +84,9 @@ export class BootstrapService {
           gender: 'LAKI_LAKI',
           golonganDarah: 'O_POSITIF',
           agama: 'ISLAM',
-          statusPernikahan: 'MENIKAH',
+          statusPerkawinan: 'KAWIN',
           pekerjaan: 'Administrator Sistem',
-          statusHubungan: 'KEPALA_KELUARGA',
+          hubunganKeluarga: 'KEPALA_KELUARGA',
         },
       });
     }
@@ -180,3 +180,4 @@ export class BootstrapService {
     };
   }
 }
+
