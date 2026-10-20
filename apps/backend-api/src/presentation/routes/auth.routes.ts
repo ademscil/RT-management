@@ -8,7 +8,7 @@ import {
   ErrorCode,
   UserRole,
 } from '@simrt/shared-types';
-import { authenticateJwt } from '../middlewares/auth.middleware.js';
+import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
@@ -473,4 +473,117 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  /**
+   * POST /api/v1/auth/create-user-account (Admin provisions login credentials directly for any family member)
+   */
+  fastify.post(
+    '/create-user-account',
+    { preHandler: [authenticateJwt, requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    async (request, reply) => {
+      const { wargaId, username, password } = (request.body as any) || {};
+
+      if (!wargaId || !username || !password) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Warga, username, dan password wajib diisi.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (password.length < 8) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Password minimal 8 karakter.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const cleanUsername = String(username).trim().toLowerCase();
+      if (cleanUsername.length < 3) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Username minimal 3 karakter.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const warga = await prisma.warga.findUnique({
+        where: { id: wargaId },
+        include: { users: true, kk: { include: { rumah: true } } },
+      });
+
+      if (!warga) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
+      if (existingUser && existingUser.wargaId !== wargaId) {
+        return reply.status(409).send({
+          success: false,
+          error: { code: ErrorCode.ERR_CONFLICT, message: 'Username sudah digunakan oleh akun lain.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const passwordHash = await hashPassword(password);
+
+      let user;
+      if (warga.users) {
+        // Update password for existing user
+        user = await prisma.user.update({
+          where: { id: warga.users.id },
+          data: {
+            username: cleanUsername,
+            passwordHash,
+            failedAttempts: 0,
+            lockedUntil: null,
+            isActive: true,
+          },
+        });
+      } else {
+        // Create new User account and generate recovery codes
+        user = await prisma.$transaction(async (tx) => {
+          const newUser = await tx.user.create({
+            data: {
+              wargaId: warga.id,
+              username: cleanUsername,
+              passwordHash,
+              role: UserRole.WARGA,
+              isActive: true,
+            },
+          });
+
+          // Generate 8 offline emergency recovery codes
+          for (let i = 1; i <= 8; i++) {
+            const rawCode = `RC${i}${Math.floor(100000 + Math.random() * 900000)}`.substring(0, 8);
+            const codeHash = await hashPassword(rawCode);
+            await tx.recoveryCode.create({
+              data: {
+                userId: newUser.id,
+                codeHash,
+              },
+            });
+          }
+
+          return newUser;
+        });
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          id: user.id,
+          username: user.username,
+          namaLengkap: warga.namaLengkap,
+          role: user.role,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
 };

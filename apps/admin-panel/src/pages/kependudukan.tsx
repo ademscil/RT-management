@@ -13,6 +13,7 @@ import {
   Trash2,
   UserPlus,
   MapPin,
+  KeyRound,
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { useAuth } from '../context/auth-context.js';
@@ -192,6 +193,48 @@ export const KependudukanPage: React.FC = () => {
   const [editFormIsDisabilitas, setEditFormIsDisabilitas] = useState(false);
   const [editFormIsBalita, setEditFormIsBalita] = useState(false);
   const [isUpdatingWarga, setIsUpdatingWarga] = useState(false);
+
+  // Modal: Buatkan Akun Login Warga
+  const [akunModalOpen, setAkunModalOpen] = useState(false);
+  const [targetAkunWarga, setTargetAkunWarga] = useState<KkMember | WargaItem | null>(null);
+  const [akunUsername, setAkunUsername] = useState('');
+  const [akunPassword, setAkunPassword] = useState('');
+  const [isCreatingAkun, setIsCreatingAkun] = useState(false);
+
+  const handleOpenBuatAkun = (w: KkMember | WargaItem) => {
+    setTargetAkunWarga(w);
+    const firstName = w.namaLengkap.toLowerCase().split(' ')[0].replace(/[^a-z0-9]/g, '');
+    setAkunUsername(firstName.length >= 3 ? firstName : `warga_${firstName}`);
+    setAkunPassword('Warga@2026!');
+    setAkunModalOpen(true);
+  };
+
+  const handleSaveAkun = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetAkunWarga || !akunUsername.trim() || !akunPassword.trim()) {
+      notify.error({ title: 'Data Belum Lengkap', description: 'Username dan password wajib diisi.' });
+      return;
+    }
+
+    setIsCreatingAkun(true);
+    try {
+      await api.post('/auth/create-user-account', {
+        wargaId: targetAkunWarga.id,
+        username: akunUsername.trim().toLowerCase(),
+        password: akunPassword.trim(),
+      });
+
+      setAkunModalOpen(false);
+      notify.success({
+        title: 'Akun Login Warga Aktif',
+        description: `Akun "${akunUsername.trim().toLowerCase()}" berhasil dibuatkan untuk ${targetAkunWarga.namaLengkap}. Warga dapat langsung login ke aplikasi mobile.`,
+      });
+    } catch (err: any) {
+      notify.error({ title: 'Gagal Membuat Akun Login', description: err.message });
+    } finally {
+      setIsCreatingAkun(false);
+    }
+  };
 
   // --- FETCH DATA HANDLERS ---
   const fetchKk = useCallback(
@@ -912,6 +955,15 @@ export const KependudukanPage: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
+                                  onClick={() => handleOpenBuatAkun(w)}
+                                  className="text-xs px-2 text-teal-700 dark:text-teal-400 border-teal-300 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/40"
+                                  title="Buat / Atur Akun Login Warga"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5" /> Akun
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => handleOpenEditWarga(w)}
                                   className="text-xs px-2.5"
                                   title="Edit Biodata Warga"
@@ -1061,6 +1113,15 @@ export const KependudukanPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenBuatAkun(member)}
+                          className="text-xs text-teal-700 dark:text-teal-400 border-teal-300 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/40"
+                          title="Buatkan / Atur Akun Login Warga Ini"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" /> Akun Login
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1836,6 +1897,85 @@ export const KependudukanPage: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ========================================================= */}
+      {/* MODAL 8: ATUR AKUN LOGIN WARGA                            */}
+      {/* ========================================================= */}
+      {akunModalOpen && targetAkunWarga && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Atur Akun Login Warga</h3>
+                  <p className="text-[11px] text-slate-500">Berikan akses masuk mandiri ke aplikasi portal warga</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setAkunModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Nama Lengkap:</span>
+                <strong className="text-slate-800 dark:text-slate-200">{targetAkunWarga.namaLengkap}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">NIK:</span>
+                <span className="font-mono text-slate-700 dark:text-slate-300">{targetAkunWarga.nikMasked}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveAkun} className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label htmlFor="akun-warga-username" className="font-semibold text-slate-700 dark:text-slate-300">
+                  Username Login:
+                </label>
+                <input
+                  id="akun-warga-username"
+                  name="username"
+                  type="text"
+                  value={akunUsername}
+                  onChange={(e) => setAkunUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                  placeholder="Contoh: acil"
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
+                  required
+                />
+                <p className="text-[10px] text-slate-500">Huruf kecil, tanpa spasi, minimal 3 karakter.</p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="akun-warga-password" className="font-semibold text-slate-700 dark:text-slate-300">
+                  Password Baru:
+                </label>
+                <input
+                  id="akun-warga-password"
+                  name="password"
+                  type="text"
+                  value={akunPassword}
+                  onChange={(e) => setAkunPassword(e.target.value)}
+                  placeholder="Minimal 8 karakter"
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-mono"
+                  required
+                />
+                <p className="text-[10px] text-slate-500">Berikan kredensial ini kepada warga untuk masuk ke aplikasi.</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" size="md" onClick={() => setAkunModalOpen(false)} disabled={isCreatingAkun}>
+                  Batal
+                </Button>
+                <Button variant="primary" size="md" type="submit" isLoading={isCreatingAkun}>
+                  Simpan & Aktifkan Akun
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
