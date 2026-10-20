@@ -59,6 +59,15 @@ export function requireRoles(allowedRoles: UserRole[]) {
       return;
     }
 
+    // SUPERUSER / Root Administrator has unrestricted full access across all modules
+    if (
+      request.userSession.role === UserRole.SUPERUSER ||
+      (request.userSession.role as string) === 'SUPERUSER' ||
+      (request.userSession.role as string) === 'SUPERADMIN'
+    ) {
+      return;
+    }
+
     if (!allowedRoles.includes(request.userSession.role)) {
       reply.status(403).send({
         success: false,

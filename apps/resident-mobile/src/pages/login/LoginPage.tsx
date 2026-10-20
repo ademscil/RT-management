@@ -56,11 +56,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
     }
   };
 
-  const handleDemoFill = () => {
-    setUsername('warga_test');
-    setPassword('WargaTest@2026!');
-  };
-
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-12">
       <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
@@ -223,17 +218,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToActivation }) => {
                 Masuk Sekarang <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </form>
-
-            {/* Quick Demo Autofill */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleDemoFill}
-                className="w-full py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-teal-400 font-medium transition-colors text-center block"
-              >
-                Isi Otomatis Akun Uji: <strong className="text-white">warga_test</strong> (WargaTest@2026!)
-              </button>
-            </div>
           </div>
 
           {/* Activation Callout */}

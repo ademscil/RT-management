@@ -35,11 +35,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickFill = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-  };
-
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-slate-950 text-slate-100 select-none">
       <div className="w-full max-w-md space-y-6">
@@ -113,34 +108,14 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials */}
-          <div className="pt-4 border-t border-slate-800 space-y-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              Akun Uji Pengurus RT:
+          {/* Security Assurance Footer */}
+          <div className="pt-4 border-t border-slate-800 text-center space-y-1">
+            <span className="text-[11px] text-slate-400 block font-medium">
+              Sistem Informasi Rukun Tetangga Terenkripsi End-to-End
             </span>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('ketua_rt', 'KetuaRT@2026!')}
-                className="p-1.5 text-center bg-slate-800/60 hover:bg-slate-800 rounded-lg text-[11px] font-medium text-teal-400 border border-slate-700/60 transition-colors"
-              >
-                Ketua RT
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('sekretaris_rt', 'Sekretaris@2026!')}
-                className="p-1.5 text-center bg-slate-800/60 hover:bg-slate-800 rounded-lg text-[11px] font-medium text-teal-400 border border-slate-700/60 transition-colors"
-              >
-                Sekretaris
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('bendahara_rt', 'Bendahara@2026!')}
-                className="p-1.5 text-center bg-slate-800/60 hover:bg-slate-800 rounded-lg text-[11px] font-medium text-teal-400 border border-slate-700/60 transition-colors"
-              >
-                Bendahara
-              </button>
-            </div>
+            <span className="text-[10px] text-teal-400 font-mono">
+              Otentikasi Argon2id & Akses Data Terproteksi RLS
+            </span>
           </div>
         </div>
       </div>

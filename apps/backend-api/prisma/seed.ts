@@ -305,6 +305,12 @@ async function main() {
   const defaultAccounts = [
     {
       wargaId: wargaKetua.id,
+      username: 'superuser',
+      password: 'SuperUser@2026!',
+      role: 'SUPERUSER',
+    },
+    {
+      wargaId: wargaKetua.id,
       username: 'ketua_rt',
       password: 'KetuaRT@2026!',
       role: 'KETUA_RT',

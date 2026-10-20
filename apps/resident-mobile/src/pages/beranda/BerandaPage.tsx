@@ -47,6 +47,16 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
     year: 'numeric',
   }).format(new Date());
 
+  const [kegiatanList, setKegiatanList] = useState<Array<{
+    id: string;
+    kategori: 'KEBERSIHAN' | 'SOSIAL' | 'KEAMANAN';
+    judul: string;
+    waktu: string;
+    lokasi: string;
+    badge: string;
+    penanggungJawab: string;
+  }>>([]);
+
   useEffect(() => {
     async function loadStatus() {
       try {
@@ -55,56 +65,39 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
           const latest = bills.items[0];
           setIuranStatus({
             isPaid: latest.status === 'PAID',
-            bulan: 'Oktober 2026',
-            nominal: latest.nominal,
+            bulan: latest.bulan ? `${latest.bulan} ${latest.tahun || ''}` : 'Bulan Berjalan',
+            nominal: latest.nominal || 0,
           });
         } else {
-          setIuranStatus({
-            isPaid: true,
-            bulan: 'Oktober 2026',
-            nominal: 50000,
-          });
+          setIuranStatus(null);
         }
       } catch {
-        setIuranStatus({
-          isPaid: true,
-          bulan: 'Oktober 2026',
-          nominal: 50000,
-        });
+        setIuranStatus(null);
+      }
+
+      try {
+        const rondaData = await mobileApi.get<Array<{ id: string; tanggal: string; shift: string; keterangan: string; pesertaWarga: string[] }>>('/operasional/ronda');
+        if (rondaData && Array.isArray(rondaData) && rondaData.length > 0) {
+          setKegiatanList(
+            rondaData.map((r) => ({
+              id: r.id,
+              kategori: 'KEAMANAN',
+              judul: `Jadwal Siskamling Shift ${r.shift}`,
+              waktu: r.tanggal,
+              lokasi: 'Pos Kamling Lingkungan RT',
+              badge: 'Siskamling',
+              penanggungJawab: r.pesertaWarga.length > 0 ? r.pesertaWarga.join(', ') : 'Regu Jaga',
+            }))
+          );
+        } else {
+          setKegiatanList([]);
+        }
+      } catch {
+        setKegiatanList([]);
       }
     }
     loadStatus();
   }, []);
-
-  const kegiatanList = [
-    {
-      id: '1',
-      kategori: 'KEBERSIHAN',
-      judul: 'Kerja Bakti Bersih Saluran Air & Fogging Nyamuk',
-      waktu: 'Minggu, 25 Okt 2026 • 07:00 WIB',
-      lokasi: 'Sepanjang Jalur Utama Blok A & B',
-      badge: 'Gotong Royong',
-      penanggungJawab: 'Bpk. Suhendra (Seksi Lingkungan)',
-    },
-    {
-      id: '2',
-      kategori: 'SOSIAL',
-      judul: 'Posyandu Balita & Pemeriksaan Tensi Lansia Melati',
-      waktu: 'Selasa, 27 Okt 2026 • 08:30 WIB',
-      lokasi: 'Balai Warga RT 05 / RW 02',
-      badge: 'Kesehatan Warga',
-      penanggungJawab: 'Ibu Ratna (Kader Posyandu)',
-    },
-    {
-      id: '3',
-      kategori: 'KEAMANAN',
-      judul: 'Ronda Gabungan & Pengecekan Lampu Jalan Mati',
-      waktu: 'Sabtu, 24 Okt 2026 • 22:00 WIB',
-      lokasi: 'Pos Kamling Depan Gapura',
-      badge: 'Siskamling',
-      penanggungJawab: 'Bpk. Bambang (Ketua RT)',
-    },
-  ];
 
   const filteredKegiatan = kegiatanList.filter((k) => {
     if (activeCategory === 'SEMUA') return true;
@@ -276,35 +269,47 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
           </div>
 
           <div className="space-y-3">
-            {filteredKegiatan.map((item) => (
-              <Card key={item.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4 sm:p-5 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-                      {item.badge}
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">RT 05 Sukamaju</span>
-                  </div>
+            {filteredKegiatan.length === 0 ? (
+              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <Calendar className="w-8 h-8 text-slate-400 mx-auto opacity-60" />
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Belum ada agenda kegiatan warga terjadwal
+                </p>
+                <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                  Jadwal kerja bakti, posyandu balita, dan siskamling ronda malam resmi dari pengurus RT akan otomatis tampil di sini.
+                </p>
+              </div>
+            ) : (
+              filteredKegiatan.map((item) => (
+                <Card key={item.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 sm:p-5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                        {item.badge}
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium">RT 05 Sukamaju</span>
+                    </div>
 
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
-                    {item.judul}
-                  </h4>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                      {item.judul}
+                    </h4>
 
-                  <div className="text-xs text-slate-500 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <p className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                      <Calendar className="w-4 h-4 text-teal-600 shrink-0" /> {item.waktu}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-slate-400 shrink-0" /> {item.lokasi}
-                    </p>
-                    <p className="flex items-center gap-2 text-slate-500">
-                      <HeartHandshake className="w-4 h-4 text-slate-400 shrink-0" /> Koordinator:{' '}
-                      {item.penanggungJawab}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="text-xs text-slate-500 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <p className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
+                        <Calendar className="w-4 h-4 text-teal-600 shrink-0" /> {item.waktu}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-slate-400 shrink-0" /> {item.lokasi}
+                      </p>
+                      <p className="flex items-center gap-2 text-slate-500">
+                        <HeartHandshake className="w-4 h-4 text-slate-400 shrink-0" /> Koordinator:{' '}
+                        {item.penanggungJawab}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
 

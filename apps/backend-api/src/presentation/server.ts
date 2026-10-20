@@ -14,6 +14,7 @@ import { notificationRoutes } from './routes/notifications.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { onboardingRoutes } from './routes/onboarding.routes.js';
 import { PrismaService } from '../infrastructure/database/prisma.service.js';
+import { BootstrapService } from '../infrastructure/database/bootstrap.service.js';
 import { ErrorCode } from '@simrt/shared-types';
 
 export function createServer(): FastifyInstance {
@@ -62,12 +63,25 @@ export function createServer(): FastifyInstance {
   // 5. Global Health Check & Keep-Warm Endpoint (exempt from rate limiting)
   const healthHandler = async (req: any) => {
     let dbStatus = 'skipped';
+    let superuserStatus = 'skipped';
+    let purgeStatus = 'skipped';
+
     if (req.query?.warm === '1' || req.query?.db === '1') {
       try {
         const prisma = PrismaService.getInstance();
         if (prisma) {
           await prisma.$queryRawUnsafe('SELECT 1');
           dbStatus = 'connected';
+
+          // Automatically ensure SUPERUSER account exists in PostgreSQL
+          const su = await BootstrapService.ensureSuperuser(prisma);
+          superuserStatus = su.created ? 'created' : 'ready';
+
+          // Purge dummy demo data if explicitly requested
+          if (req.query?.purge_dummy === '1') {
+            const p = await BootstrapService.purgeDummyData(prisma);
+            purgeStatus = `purged: ${p.deletedDemoUsers} users, ${p.deletedDemoHouses} houses`;
+          }
         }
       } catch (err: any) {
         dbStatus = `error: ${err.message}`;
@@ -77,6 +91,8 @@ export function createServer(): FastifyInstance {
       status: 'healthy',
       system: 'SIM-RT Enterprise Engine',
       db: dbStatus,
+      superuser: superuserStatus,
+      purge: purgeStatus,
       time: new Date().toISOString(),
     };
   };

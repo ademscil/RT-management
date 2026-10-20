@@ -106,6 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   ];
 
   const roleLabel: Record<string, string> = {
+    SUPERUSER: 'Superuser / Root Admin',
     KETUA_RT: 'Ketua RT',
     SEKRETARIS: 'Sekretaris RT',
     BENDAHARA: 'Bendahara RT',

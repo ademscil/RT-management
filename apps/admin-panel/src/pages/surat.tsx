@@ -231,8 +231,8 @@ export const SuratPage: React.FC = () => {
     REJECTED: { label: 'Ditolak', variant: 'destructive' },
   };
 
-  const isKetuaRt = user?.role === 'KETUA_RT';
-  const isSekretaris = user?.role === 'SEKRETARIS';
+  const isKetuaRt = user?.role === 'KETUA_RT' || user?.role === 'SUPERUSER';
+  const isSekretaris = user?.role === 'SEKRETARIS' || user?.role === 'SUPERUSER';
 
   return (
     <div className="space-y-6">

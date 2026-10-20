@@ -71,10 +71,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    let isPasswordValid = await verifyPassword(password, user.passwordHash);
-    if (!isPasswordValid && user.username === 'warga_test' && (password === 'WargaRT@2026!' || password === 'WargaTest@2026!')) {
-      isPasswordValid = true;
-    }
+    const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
       const newFailedAttempts = user.failedAttempts + 1;

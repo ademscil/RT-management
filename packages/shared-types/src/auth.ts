@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export enum UserRole {
+  SUPERUSER = 'SUPERUSER',
   KETUA_RT = 'KETUA_RT',
   SEKRETARIS = 'SEKRETARIS',
   BENDAHARA = 'BENDAHARA',
