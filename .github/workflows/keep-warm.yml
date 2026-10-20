@@ -1,0 +1,17 @@
+name: Keep-Warm Bot (Vercel & DB)
+
+on:
+  schedule:
+    # Ping every 5 minutes to prevent Vercel Serverless Function and DB pool cold starts
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-warm:
+    name: Ping SIM-RT Backend Engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping SIM-RT Health & DB Keep-Warm
+        run: |
+          curl -sS --fail -m 20 "https://rt-management-six.vercel.app/api/v1/health?warm=1" || exit 0

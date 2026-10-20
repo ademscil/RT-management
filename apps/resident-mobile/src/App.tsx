@@ -54,7 +54,14 @@ const MainLayout: React.FC = () => {
 
   // Background keep-warm ping to pre-warm Vercel serverless container & DB pool
   useEffect(() => {
-    fetch(`${apiUrl}/api/v1/health`, { cache: 'no-store' }).catch(() => {});
+    fetch(`${apiUrl}/api/v1/health?warm=1`, { cache: 'no-store' }).catch(() => {});
+
+    // Maintain warm container & database pool while mobile app / PWA is open
+    const interval = setInterval(() => {
+      fetch(`${apiUrl}/api/v1/health?warm=1`, { cache: 'no-store' }).catch(() => {});
+    }, 4 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [apiUrl]);
 
   // Stabilize SSE callback to prevent re-render loops

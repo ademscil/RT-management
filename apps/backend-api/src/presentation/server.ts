@@ -13,6 +13,7 @@ import { operasionalRoutes } from './routes/operasional.routes.js';
 import { notificationRoutes } from './routes/notifications.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { onboardingRoutes } from './routes/onboarding.routes.js';
+import { PrismaService } from '../infrastructure/database/prisma.service.js';
 import { ErrorCode } from '@simrt/shared-types';
 
 export function createServer(): FastifyInstance {
@@ -58,12 +59,30 @@ export function createServer(): FastifyInstance {
     timeWindow: '1 minute',
   });
 
-  // 5. Global Health Check
-  app.get('/health', async () => ({
-    status: 'healthy',
-    system: 'SIM-RT Enterprise Engine',
-    time: new Date().toISOString(),
-  }));
+  // 5. Global Health Check & Keep-Warm Endpoint (exempt from rate limiting)
+  const healthHandler = async (req: any) => {
+    let dbStatus = 'skipped';
+    if (req.query?.warm === '1' || req.query?.db === '1') {
+      try {
+        const prisma = PrismaService.getInstance();
+        if (prisma) {
+          await prisma.$queryRawUnsafe('SELECT 1');
+          dbStatus = 'connected';
+        }
+      } catch (err: any) {
+        dbStatus = `error: ${err.message}`;
+      }
+    }
+    return {
+      status: 'healthy',
+      system: 'SIM-RT Enterprise Engine',
+      db: dbStatus,
+      time: new Date().toISOString(),
+    };
+  };
+
+  app.get('/health', { config: { rateLimit: false } }, healthHandler);
+  app.get('/api/v1/health', { config: { rateLimit: false } }, healthHandler);
 
   // 6. Register Modular API Routes
   app.register(authRoutes, { prefix: '/api/v1/auth' });

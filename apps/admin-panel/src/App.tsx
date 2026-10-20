@@ -29,7 +29,14 @@ const MainLayout: React.FC = () => {
 
   useEffect(() => {
     // Non-blocking background keep-warm ping to wake up Vercel serverless container early
-    fetch(`${API_ORIGIN}/api/v1/health`, { cache: 'no-store' }).catch(() => {});
+    fetch(`${API_ORIGIN}/api/v1/health?warm=1`, { cache: 'no-store' }).catch(() => {});
+
+    // Maintain warm container & database connection pool while tab is open
+    const interval = setInterval(() => {
+      fetch(`${API_ORIGIN}/api/v1/health?warm=1`, { cache: 'no-store' }).catch(() => {});
+    }, 4 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (isLoading) {
