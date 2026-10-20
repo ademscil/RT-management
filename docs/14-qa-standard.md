@@ -25,3 +25,4 @@ Sebuah fitur atau perbaikan kode baru dianggap **Selesai (Done)** apabila memenu
 | **Tabel Sensus Warga** | Tampil seluruh kolom kependudukan | Tabel dapat di-scroll horizontal dengan scrollbar kustom | Tampilan kartu kependudukan atau scroll mulus |
 | **Modal Formulir** | Tampil di tengah layar dengan backdrop blur | Max-width 640px, padding proporsional | Full-width bottom sheet atau scroll vertikal mandiri |
 | **Bottom Navigation APK** | Tersembunyi (hidden) | Tersembunyi | Sticky bottom bar dengan haptic tap feedback |
+

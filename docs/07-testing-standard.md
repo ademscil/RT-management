@@ -75,3 +75,4 @@ Untuk menguji binary mobile:
    .\apps\resident-mobile\android\gradlew.bat -p apps\resident-mobile\android assembleDebug
    ```
 3. Verifikasi file output di `release-apk/simrt-warga-v1.0.0-debug.apk`.
+

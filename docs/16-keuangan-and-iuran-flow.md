@@ -39,3 +39,4 @@ Dokumen spesifikasi modul Keuangan dan Penagihan Iuran Warga RT 05 / RW 02.
 - Seluruh mutasi kas memiliki kolom `saldoSetelahTransaksi` yang dihitung secara atomik dalam transaksi database.
 - Laporan kas bulanan menampilkan ringkasan: Total Pemasukan, Total Pengeluaran, Saldo Akhir, dan Persentase Kepatuhan Iuran Warga per Blok.
 - Warga dapat memantau grafik transparansi kas umum langsung dari aplikasi mobile (prinsip *akuntabilitas terbuka*).
+

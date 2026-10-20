@@ -54,3 +54,4 @@ Ketika pengurus melihat foto berkas KTP atau KK:
 - E-Surat yang diterbitkan oleh Ketua RT ditandatangani menggunakan algoritma asimetris kurva eliptik **Ed25519**.
 - Kunci privat (`ED25519_PRIVATE_KEY`) disimpan di backend yang aman.
 - QR Code yang tercetak pada e-surat memuat URL verifikasi publik berparameter hash tanda tangan. Siapapun (Kelurahan, Kecamatan, atau warga) yang memindai QR code dapat memverifikasi keaslian surat langsung ke backend tanpa risiko pemalsuan cap/tanda tangan manual.
+

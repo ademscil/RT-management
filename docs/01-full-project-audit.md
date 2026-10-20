@@ -68,3 +68,4 @@ Berdasarkan `prisma/schema.prisma`:
   - Android SDK Path: `C:\Users\adam.cid00676\AppData\Local\Android\Sdk`
   - Java JDK Path: `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot`
   - Output binary: `release-apk/simrt-warga-v1.0.0-debug.apk` (ukuran: ±6.6 MB).
+

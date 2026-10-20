@@ -47,3 +47,4 @@ Dalam tata pamong RT di Indonesia:
 2. **Proteksi Hapus Rumah (Cascade Guard):** Pengurus tidak boleh secara sengaja maupun tidak sengaja menghapus rumah yang masih memiliki warga aktif. Sistem akan melempar galat `400 Bad Request` dengan pesan: *"Rumah masih memiliki X warga terdaftar. Pindahkan atau hapus warga terlebih dahulu."*
 3. **Pengikatan Anggota Keluarga:** Saat pengurus menambah anggota baru lewat House Workbench, sistem secara otomatis mengunci `kkId` ke KK yang ada di rumah tersebut sehingga pengurus tidak perlu menghafal atau mencari ID KK secara manual.
 4. **Verifikasi Mandiri Warga via Mobile:** Jika warga baru mendaftar mandiri via aplikasi APK dengan mengunggah foto KK dan KTP, status KK bernilai `PENDING`. Pengurus RT memeriksa keabsahan berkas di Admin Panel melalui Forensic Viewer, kemudian menekan tombol **"Verifikasi"** untuk mengaktifkan KK dan warganya.
+

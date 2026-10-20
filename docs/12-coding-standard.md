@@ -59,3 +59,4 @@ Mengacu pada arsitektur benchmark `D:\AOP\portal-csi-github`:
 1. **Inline Field Errors:** Validasi input formulir wajib ditampilkan langsung di bawah input bersangkutan dengan teks merah kecil yang jelas (bukan hanya melempar notifikasi toast).
 2. **Toast Feedback:** Toast notifikasi hanya digunakan untuk konfirmasi hasil akhir operasi async (misal: "Data warga berhasil diperbarui" atau "Gagal menyimpan: koneksi terputus").
 3. **Empty States & Skeletons:** Gunakan komponen skeleton loader yang proporsional saat memuat data, dan tampilkan EmptyStateCard dengan pesan bersahabat dan call-to-action saat data kosong.
+

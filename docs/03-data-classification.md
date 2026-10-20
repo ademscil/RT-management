@@ -19,3 +19,4 @@ Dokumen klasifikasi tingkat kerahasiaan data di lingkungan SIM-RT dan panduan pe
 
 1. **Anti-Leakage Nomor Telepon:** Endpoint publik atau daftar warga tidak boleh mereturn field `nomorTelepon` kecuali untuk profil pengguna itu sendiri.
 2. **Sanitasi Error Response:** Jika terjadi kegagalan database (misal error Prisma), handler Fastify wajib mengembalikan kode galat terstandar (`ERR_INTERNAL`, `ERR_VALIDATION`, dll) tanpa pernah memuntahkan query SQL mentah atau exception stack trace ke antarmuka klien.
+

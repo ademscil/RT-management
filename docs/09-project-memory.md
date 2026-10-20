@@ -35,3 +35,4 @@ Dokumen ini mencatat keputusan arsitektural permanen, koreksi pengguna, dan bata
   - Kartu statistik dengan garis aksen atas (top border accent) 3px dan icon wrap 44x44px berwarna semantik.
   - Tipografi tegas: label 11px uppercase tracked (`letter-spacing: 0.05em`), nilai angka tabular 28px tebal.
   - Search bar segmented/pill dan tabel responsif dengan scrollbar ramping kustom.
+

@@ -40,3 +40,4 @@ Dokumen spesifikasi alur pelayanan permohonan surat pengantar warga secara digit
 Setiap lembar PDF surat pengantar yang diterbitkan dilengkapi dengan QR Code unik:
 - Format payload QR: `https://domain-rt.id/verify-surat/{suratId}?sig={ed25519SignatureHex}`
 - Petugas di Kantor Kelurahan atau Kecamatan dapat memindai QR code ini menggunakan kamera ponsel apapun tanpa harus login, dan sistem akan menampilkan status sah keaslian surat langsung dari database RT 05.
+

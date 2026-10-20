@@ -29,3 +29,4 @@ Dokumen verifikasi akhir sebelum SIM-RT dinyatakan Go-Live di lingkungan RT 05 /
 - [x] Kontras warna teks memenuhi standar WCAG AA (minimal 4.5:1).
 - [x] Desain terbebas dari "AI Slop" — mengadopsi standar enterprise Astra Otoparts Portal E-Venturer: kartu statistik bergaris aksen gradien atas, icon wrap semantik 44x44px, tipografi tabular, dan tabel responsif dengan scrollbar ramping.
 - [x] Tombol Logout tersedia dengan jelas di Admin Panel dan Aplikasi Mobile APK.
+

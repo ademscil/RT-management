@@ -78,3 +78,4 @@ Platform ini mengadopsi standar desain enterprise berkeahlian tinggi (mengacu pa
 3. **Tipografi Terstruktur & Angka Tabular:** Label uppercase 11px dengan letter spacing `0.05em`, nilai angka 28px tebal dengan `font-variant-numeric: tabular-nums` agar sejajar rapi saat diurutkan.
 4. **Tabel Data Kelas Enterprise:** Header tabel uppercase `11px font-bold text-slate-500`, scrollbar kustom ramping 6px, serta definisi lebar kolom yang eksplisit (`.colCenter`, `.colText`, `.colActions`).
 5. **Form & Aksesibilitas Ketat:** Seluruh elemen interaktif wajib memiliki `id`, `name`, `htmlFor`, `aria-label`, dan status fokus visual dengan cincin fokus 2px yang jelas.
+
