@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { Capacitor } from '@capacitor/core';
+import { Camera as CapCamera } from '@capacitor/camera';
 import { X, Camera, Keyboard, AlertCircle } from 'lucide-react';
 import { Button, notify } from '@simrt/ui-kit';
 
@@ -28,6 +30,25 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
     const startScanner = async () => {
       try {
         setCameraError(null);
+
+        // Explicitly trigger native OS Camera Permission prompt if on native device (Android/iOS)
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const check = await CapCamera.checkPermissions();
+            if (check.camera !== 'granted') {
+              const req = await CapCamera.requestPermissions({ permissions: ['camera'] });
+              if (req.camera !== 'granted') {
+                if (isMounted) {
+                  setCameraError('Izin kamera tidak diberikan. Silakan izinkan kamera di pengaturan HP atau masukkan token secara manual.');
+                }
+                return;
+              }
+            }
+          } catch (permErr) {
+            console.warn('[Camera Permission Check]:', permErr);
+          }
+        }
+
         const qrScanner = new Html5Qrcode(scannerId);
         html5QrCodeRef.current = qrScanner;
 

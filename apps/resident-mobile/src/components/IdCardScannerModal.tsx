@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Camera as CapCamera } from '@capacitor/camera';
 import { Camera, RefreshCw, X, Check, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@simrt/ui-kit';
 
@@ -28,6 +30,23 @@ export const IdCardScannerModal: React.FC<IdCardScannerModalProps> = ({
   const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
+
+      // Explicitly trigger native OS Camera Permission prompt if on native device (Android/iOS)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const check = await CapCamera.checkPermissions();
+          if (check.camera !== 'granted') {
+            const req = await CapCamera.requestPermissions({ permissions: ['camera'] });
+            if (req.camera !== 'granted') {
+              setCameraError('Izin akses kamera ditolak. Silakan gunakan tombol "Pilih dari Galeri" atau izinkan di pengaturan HP.');
+              return;
+            }
+          }
+        } catch (permErr) {
+          console.warn('[Camera Permission Check]:', permErr);
+        }
+      }
+
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
