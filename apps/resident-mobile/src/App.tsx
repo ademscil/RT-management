@@ -40,6 +40,9 @@ const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('beranda');
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
+  // SSE Real-Time listener for resident notifications & API endpoint
+  const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
+
   // Initialize Native Android StatusBar (clean separation, dark icons on light app)
   useEffect(() => {
     if (Capacitor.isPluginAvailable('StatusBar')) {
@@ -49,13 +52,16 @@ const MainLayout: React.FC = () => {
     }
   }, []);
 
+  // Background keep-warm ping to pre-warm Vercel serverless container & DB pool
+  useEffect(() => {
+    fetch(`${apiUrl}/api/v1/health`, { cache: 'no-store' }).catch(() => {});
+  }, [apiUrl]);
+
   // Stabilize SSE callback to prevent re-render loops
   const handleSseEvent = useCallback((_event: any) => {
     setUnreadCount((prev) => prev + 1);
   }, []);
 
-  // SSE Real-Time listener for resident notifications
-  const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
   useSSE({
     url: `${apiUrl}/api/v1/notifications/stream`,
     token: isAuthenticated ? token : null,

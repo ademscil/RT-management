@@ -1,8 +1,9 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/auth-context.js';
 import { Sidebar, type AdminTab } from './components/layout/sidebar.js';
 import { Header } from './components/layout/header.js';
 import { AppToaster, AppErrorBoundary, OfflineModeBanner } from '@simrt/ui-kit';
+import { API_ORIGIN } from './services/api.js';
 
 // Route-based code splitting for instantaneous initial load
 const DashboardPage = lazy(() => import('./pages/dashboard.js').then((m) => ({ default: m.DashboardPage })));
@@ -25,6 +26,11 @@ const ModuleFallback: React.FC = () => (
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+
+  useEffect(() => {
+    // Non-blocking background keep-warm ping to wake up Vercel serverless container early
+    fetch(`${API_ORIGIN}/api/v1/health`, { cache: 'no-store' }).catch(() => {});
+  }, []);
 
   if (isLoading) {
     return (

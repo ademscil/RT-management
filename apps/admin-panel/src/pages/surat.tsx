@@ -118,13 +118,22 @@ export const SuratPage: React.FC = () => {
   useEffect(() => {
     async function loadWalkinData() {
       try {
-        const tmpl = await api.get<TemplateSurat[]>('/surat/templates');
-        setTemplates(tmpl);
-        if (tmpl.length > 0) setSelectedTemplateId(tmpl[0].id);
+        const [tmplRes, wargaRes] = await Promise.allSettled([
+          api.get<TemplateSurat[]>('/surat/templates'),
+          api.get<{ items: WargaOption[] }>('/kependudukan/warga', { limit: 100 }),
+        ]);
 
-        const w = await api.get<{ items: WargaOption[] }>('/kependudukan/warga', { limit: 100 });
-        setWargaOptions(w.items);
-        if (w.items.length > 0) setSelectedWargaId(w.items[0].id);
+        if (tmplRes.status === 'fulfilled') {
+          const tmpl = tmplRes.value;
+          setTemplates(tmpl);
+          if (tmpl.length > 0) setSelectedTemplateId(tmpl[0].id);
+        }
+
+        if (wargaRes.status === 'fulfilled') {
+          const w = wargaRes.value;
+          setWargaOptions(w.items);
+          if (w.items.length > 0) setSelectedWargaId(w.items[0].id);
+        }
       } catch {
         // Silently fallback
       }

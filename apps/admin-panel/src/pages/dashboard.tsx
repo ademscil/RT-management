@@ -60,28 +60,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
 
   useEffect(() => {
     async function loadData() {
-      try {
-        const houses = await api.get<BlockMapHouse[]>('/kependudukan/map');
+      // Parallelize all dashboard queries to eliminate sequential request waterfall
+      const [housesResult, verifyResult, signResult, iuranResult] = await Promise.allSettled([
+        api.get<BlockMapHouse[]>('/kependudukan/map'),
+        api.get<{ meta: { total: number } }>('/surat', { status: 'SUBMITTED', limit: 1 }),
+        api.get<{ meta: { total: number } }>('/surat', { status: 'VERIFIED_SEKRETARIS', limit: 1 }),
+        api.get<{ meta: { total: number } }>('/keuangan/tagihan', { status: 'PENDING_VERIFICATION', limit: 1 }),
+      ]);
+
+      if (housesResult.status === 'fulfilled') {
+        const houses = housesResult.value;
         setMapData(houses);
         if (houses.length > 0) {
           setSelectedHouse(houses[0]);
         }
-      } catch (err) {
-        console.error('Failed to load map data:', err);
+      } else {
+        console.error('Failed to load map data:', housesResult.reason);
       }
 
-      // Load action counts
-      try {
-        const suratVerifyRes = await api.get<{ meta: { total: number } }>('/surat', { status: 'SUBMITTED', limit: 1 });
-        setPendingSuratVerify(suratVerifyRes.meta?.total || 0);
-
-        const suratSignRes = await api.get<{ meta: { total: number } }>('/surat', { status: 'VERIFIED_SEKRETARIS', limit: 1 });
-        setPendingSuratSign(suratSignRes.meta?.total || 0);
-
-        const iuranRes = await api.get<{ meta: { total: number } }>('/keuangan/tagihan', { status: 'PENDING_VERIFICATION', limit: 1 });
-        setPendingIuran(iuranRes.meta?.total || 0);
-      } catch (err) {
-        console.error('Failed to load pending counts:', err);
+      if (verifyResult.status === 'fulfilled') {
+        setPendingSuratVerify(verifyResult.value.meta?.total || 0);
+      }
+      if (signResult.status === 'fulfilled') {
+        setPendingSuratSign(signResult.value.meta?.total || 0);
+      }
+      if (iuranResult.status === 'fulfilled') {
+        setPendingIuran(iuranResult.value.meta?.total || 0);
       }
     }
     loadData();
