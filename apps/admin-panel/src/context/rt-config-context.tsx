@@ -35,6 +35,7 @@ interface RtConfigContextType {
   refreshConfig: () => Promise<void>;
   switchRt: (rtId: string) => Promise<void>;
   createRt: (newRt: Partial<RtConfig>) => Promise<RtConfig>;
+  deleteRt: (rtId: string) => Promise<void>;
   updateConfig: (newConfig: Partial<RtConfig>) => Promise<void>;
 }
 
@@ -113,6 +114,17 @@ export const RtConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     throw new Error('Gagal mendaftarkan RT baru.');
   };
 
+  const deleteRt = async (rtId: string) => {
+    await api.delete<any>(`/config/rt/${rtId}`);
+    setRtList((prev) => prev.filter((r) => r.id !== rtId));
+    if (config.id === rtId) {
+      const remaining = rtList.filter((r) => r.id !== rtId);
+      if (remaining.length > 0) {
+        await switchRt(remaining[0].id || '');
+      }
+    }
+  };
+
   const updateConfig = async (newConfig: Partial<RtConfig>) => {
     const targetId = config.id || activeRtId;
     const url = targetId ? `/config/rt/${targetId}` : '/config/rt';
@@ -136,6 +148,7 @@ export const RtConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         refreshConfig: fetchConfig,
         switchRt,
         createRt,
+        deleteRt,
         updateConfig,
       }}
     >
@@ -155,6 +168,7 @@ export const useRtConfig = () => {
       refreshConfig: async () => {},
       switchRt: async () => {},
       createRt: async () => DEFAULT_RT_CONFIG,
+      deleteRt: async () => {},
       updateConfig: async () => {},
     };
   }

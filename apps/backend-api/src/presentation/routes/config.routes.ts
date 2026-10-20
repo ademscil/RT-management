@@ -74,9 +74,18 @@ export const configRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { createdAt: 'asc' },
     });
 
+    // Deduplicate by (kodeRt + kodeRw + namaKelurahan + namaKota)
+    const seen = new Set<string>();
+    const uniqueList = list.filter((item) => {
+      const key = `${item.kodeRt}-${item.kodeRw}-${item.namaKelurahan}-${item.namaKota}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     return reply.send({
       success: true,
-      data: list.map(formatRt),
+      data: uniqueList.map(formatRt),
       timestamp: new Date().toISOString(),
     });
   });
@@ -284,5 +293,34 @@ export const configRoutes: FastifyPluginAsync = async (fastify) => {
     '/rt/:id',
     { preHandler: [authenticateJwt, requireRoles([UserRole.SUPERUSER, UserRole.KETUA_RT])] },
     handleUpdateRt
+  );
+
+  fastify.delete(
+    '/rt/:id',
+    { preHandler: [authenticateJwt, requireRoles([UserRole.SUPERUSER])] },
+    async (request, reply) => {
+      const { id } = request.params as any;
+      const count = await prisma.rukunTetanggaConfig.count();
+      if (count <= 1) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_VALIDATION,
+            message: 'Minimal harus ada 1 komunitas RT aktif dalam sistem.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      await prisma.rukunTetanggaConfig.delete({
+        where: { id },
+      }).catch(() => {});
+
+      return reply.send({
+        success: true,
+        data: { id, deleted: true },
+        timestamp: new Date().toISOString(),
+      });
+    }
   );
 };

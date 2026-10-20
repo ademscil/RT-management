@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const PengaturanPage: React.FC = () => {
-  const { config, rtList, activeRtId, updateConfig, switchRt, createRt, refreshConfig, isLoading } = useRtConfig();
+  const { config, rtList, activeRtId, updateConfig, switchRt, createRt, deleteRt, refreshConfig, isLoading } = useRtConfig();
   const { user } = useAuth();
 
   // Edit form state
@@ -236,20 +236,38 @@ export const PengaturanPage: React.FC = () => {
                       {rtItem.id ? `ID: ${rtItem.id.substring(0, 8)}...` : 'Default'}
                     </span>
 
-                    {isActive ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-teal-600 dark:text-teal-400">
-                        <Check className="w-3.5 h-3.5" /> Wilayah Terpilih
-                      </span>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => rtItem.id && switchRt(rtItem.id)}
-                        className="text-xs h-7 px-3 border-teal-500/40 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40"
-                      >
-                        Pilih RT Ini
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {!isActive && user?.role === 'SUPERUSER' && rtList.length > 1 && rtItem.id && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm(`Hapus data pendaftaran ${rtItem.displayTitle}?`)) {
+                              await deleteRt(rtItem.id!);
+                              notify.info({ title: 'RT Dihapus', description: 'Komunitas RT telah dihapus.' });
+                            }
+                          }}
+                          className="text-[11px] text-rose-500 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                          title="Hapus RT"
+                        >
+                          Hapus
+                        </button>
+                      )}
+
+                      {isActive ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-teal-600 dark:text-teal-400">
+                          <Check className="w-3.5 h-3.5" /> Wilayah Terpilih
+                        </span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => rtItem.id && switchRt(rtItem.id)}
+                          className="text-xs h-7 px-3 border-teal-500/40 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40"
+                        >
+                          Pilih RT Ini
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
