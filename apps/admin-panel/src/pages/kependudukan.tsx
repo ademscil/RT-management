@@ -59,6 +59,9 @@ interface WargaItem {
   alamatDomisili: string;
   statusVerifikasiKk: string;
   kkId?: string;
+  hasAccount?: boolean;
+  userRole?: string | null;
+  username?: string | null;
 }
 
 interface KkMember {
@@ -78,6 +81,9 @@ interface KkMember {
   isDisabilitas: boolean;
   isBalita: boolean;
   isIbuHamil: boolean;
+  hasAccount?: boolean;
+  userRole?: string | null;
+  username?: string | null;
 }
 
 interface KartuKeluargaRow {
@@ -200,25 +206,37 @@ export const KependudukanPage: React.FC = () => {
   const [editFormIsBalita, setEditFormIsBalita] = useState(false);
   const [isUpdatingWarga, setIsUpdatingWarga] = useState(false);
 
-  // Modal: Buatkan Akun Login Warga
+  // Modal: Buatkan Akun Login & Atur Hak Akses Warga / Pengurus
   const [akunModalOpen, setAkunModalOpen] = useState(false);
   const [targetAkunWarga, setTargetAkunWarga] = useState<KkMember | WargaItem | null>(null);
   const [akunUsername, setAkunUsername] = useState('');
   const [akunPassword, setAkunPassword] = useState('');
+  const [akunRole, setAkunRole] = useState<string>('WARGA');
   const [isCreatingAkun, setIsCreatingAkun] = useState(false);
 
   const handleOpenBuatAkun = (w: KkMember | WargaItem) => {
     setTargetAkunWarga(w);
     const firstName = w.namaLengkap.toLowerCase().split(' ')[0].replace(/[^a-z0-9]/g, '');
-    setAkunUsername(firstName.length >= 3 ? firstName : `warga_${firstName}`);
-    setAkunPassword('Warga@2026!');
+    setAkunUsername(w.username || (firstName.length >= 3 ? firstName : `warga_${firstName}`));
+    setAkunPassword('');
+    setAkunRole(w.userRole || 'WARGA');
     setAkunModalOpen(true);
   };
 
   const handleSaveAkun = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetAkunWarga || !akunUsername.trim() || !akunPassword.trim()) {
-      notify.error({ title: 'Data Belum Lengkap', description: 'Username dan password wajib diisi.' });
+    if (!targetAkunWarga || !akunUsername.trim()) {
+      notify.error({ title: 'Data Belum Lengkap', description: 'Username login wajib diisi.' });
+      return;
+    }
+
+    if (!targetAkunWarga.hasAccount && (!akunPassword.trim() || akunPassword.trim().length < 8)) {
+      notify.error({ title: 'Password Wajib', description: 'Password minimal 8 karakter untuk akun baru.' });
+      return;
+    }
+
+    if (akunPassword.trim() && akunPassword.trim().length < 8) {
+      notify.error({ title: 'Password Kurang Panjang', description: 'Password minimal 8 karakter.' });
       return;
     }
 
@@ -227,19 +245,20 @@ export const KependudukanPage: React.FC = () => {
       await api.post('/auth/create-user-account', {
         wargaId: targetAkunWarga.id,
         username: akunUsername.trim().toLowerCase(),
-        password: akunPassword.trim(),
+        password: akunPassword.trim() || undefined,
+        role: akunRole,
       });
 
       setAkunModalOpen(false);
       notify.success({
-        title: 'Akun Login Warga Aktif',
-        description: `Akun "${akunUsername.trim().toLowerCase()}" berhasil dibuatkan untuk ${targetAkunWarga.namaLengkap}. Warga dapat langsung login ke aplikasi mobile.`,
+        title: targetAkunWarga.hasAccount ? 'Hak Akses / Akun Diperbarui' : 'Akun Berhasil Diaktifkan',
+        description: `Akun "${akunUsername.trim().toLowerCase()}" dengan peran ${akunRole} berhasil disimpan untuk ${targetAkunWarga.namaLengkap}.`,
       });
 
       await fetchKk(kkMeta.page, kkMeta.limit, kkSearch);
       await fetchWarga(wargaMeta.page, wargaMeta.limit, wargaSearch, golDarahFilter);
     } catch (err: any) {
-      notify.error({ title: 'Gagal Membuat Akun Login', description: err.message });
+      notify.error({ title: 'Gagal Menyimpan Akun', description: err.message });
     } finally {
       setIsCreatingAkun(false);
     }
@@ -916,10 +935,28 @@ export const KependudukanPage: React.FC = () => {
                           <tr key={w.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                             <td className="py-3.5 px-4">
                               <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">{w.namaLengkap}</div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                 <Badge variant={w.hubunganKeluarga === 'KEPALA_KELUARGA' ? 'default' : 'outline'} className="text-[10px]">
                                   {formatHubunganKeluarga(w.hubunganKeluarga)}
                                 </Badge>
+                                {w.userRole && (
+                                  <Badge
+                                    variant={
+                                      w.userRole === 'SUPERUSER' ? 'pii' :
+                                      w.userRole === 'KETUA_RT' ? 'warning' :
+                                      w.userRole === 'BENDAHARA' ? 'success' :
+                                      w.userRole === 'SEKRETARIS' ? 'default' : 'outline'
+                                    }
+                                    className={`text-[10px] font-bold ${
+                                      w.userRole === 'SEKRETARIS' ? 'text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:text-blue-300' : ''
+                                    }`}
+                                  >
+                                    {w.userRole === 'SUPERUSER' ? '★ Superuser' :
+                                     w.userRole === 'KETUA_RT' ? 'Ketua RT' :
+                                     w.userRole === 'SEKRETARIS' ? 'Sekretaris' :
+                                     w.userRole === 'BENDAHARA' ? 'Bendahara' : 'Akun Warga'}
+                                  </Badge>
+                                )}
                                 {w.isLansia && <Badge variant="warning" className="text-[10px]">Lansia</Badge>}
                                 {w.isDisabilitas && <Badge variant="destructive" className="text-[10px]">Disabilitas</Badge>}
                               </div>
@@ -963,13 +1000,17 @@ export const KependudukanPage: React.FC = () => {
                             <td className="py-3.5 px-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <Button
-                                  variant="outline"
+                                  variant={w.hasAccount ? 'outline' : 'primary'}
                                   size="sm"
                                   onClick={() => handleOpenBuatAkun(w)}
-                                  className="text-xs px-2 text-teal-700 dark:text-teal-400 border-teal-300 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/40"
-                                  title="Buat / Atur Akun Login Warga"
+                                  className={`text-xs px-2 ${
+                                    w.hasAccount
+                                      ? 'text-teal-700 dark:text-teal-400 border-teal-300 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/40'
+                                      : 'bg-teal-600 hover:bg-teal-700 text-white'
+                                  }`}
+                                  title={w.hasAccount ? 'Atur Akun Login & Hak Akses Pengurus' : 'Buatkan Akun Login & Tentukan Peran'}
                                 >
-                                  <KeyRound className="w-3.5 h-3.5" /> Akun
+                                  <KeyRound className="w-3.5 h-3.5" /> {w.hasAccount ? 'Atur Akun' : 'Buat Akun'}
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -1096,7 +1137,7 @@ export const KependudukanPage: React.FC = () => {
                           {member.namaLengkap.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h5 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                               {member.namaLengkap}
                             </h5>
@@ -1106,6 +1147,24 @@ export const KependudukanPage: React.FC = () => {
                             >
                               {formatHubunganKeluarga(member.hubunganKeluarga)}
                             </Badge>
+                            {member.userRole && (
+                              <Badge
+                                variant={
+                                  member.userRole === 'SUPERUSER' ? 'pii' :
+                                  member.userRole === 'KETUA_RT' ? 'warning' :
+                                  member.userRole === 'BENDAHARA' ? 'success' :
+                                  member.userRole === 'SEKRETARIS' ? 'default' : 'outline'
+                                }
+                                className={`text-[10px] font-bold ${
+                                  member.userRole === 'SEKRETARIS' ? 'text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:text-blue-300' : ''
+                                }`}
+                              >
+                                {member.userRole === 'SUPERUSER' ? '★ Superuser' :
+                                 member.userRole === 'KETUA_RT' ? 'Ketua RT' :
+                                 member.userRole === 'SEKRETARIS' ? 'Sekretaris' :
+                                 member.userRole === 'BENDAHARA' ? 'Bendahara' : 'Akun Warga'}
+                              </Badge>
+                            )}
                             {member.isLansia && <Badge variant="warning" className="text-[10px]">Lansia</Badge>}
                             {member.isBalita && <Badge variant="outline" className="text-[10px] text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700">Balita</Badge>}
                             {member.isDisabilitas && <Badge variant="destructive" className="text-[10px]">Disabilitas</Badge>}
@@ -1126,13 +1185,17 @@ export const KependudukanPage: React.FC = () => {
 
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-700">
                         <Button
-                          variant="outline"
+                          variant={member.hasAccount ? 'outline' : 'primary'}
                           size="sm"
                           onClick={() => handleOpenBuatAkun(member)}
-                          className="text-xs text-teal-700 dark:text-teal-400 border-teal-300 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/40"
-                          title="Buatkan / Atur Akun Login Warga Ini"
+                          className={`text-xs ${
+                            member.hasAccount
+                              ? 'text-teal-700 dark:text-teal-400 border-teal-300 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/40'
+                              : 'bg-teal-600 hover:bg-teal-700 text-white'
+                          }`}
+                          title={member.hasAccount ? 'Atur Akun Login & Hak Akses Pengurus' : 'Buatkan Akun Login & Tentukan Peran'}
                         >
-                          <KeyRound className="w-3.5 h-3.5" /> Akun Login
+                          <KeyRound className="w-3.5 h-3.5" /> {member.hasAccount ? 'Atur Akun' : 'Buat Akun'}
                         </Button>
                         <Button
                           variant="outline"
@@ -1948,15 +2011,17 @@ export const KependudukanPage: React.FC = () => {
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-400 flex items-center justify-center">
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Atur Akun Login Warga</h3>
-                  <p className="text-[11px] text-slate-500">Berikan akses masuk mandiri ke aplikasi portal warga</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {targetAkunWarga.hasAccount ? 'Atur Hak Akses & Akun' : 'Buatkan Akun & Tentukan Peran'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Tentukan wewenang Pengurus RT atau akun Warga Mobile</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setAkunModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button type="button" onClick={() => setAkunModalOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1970,9 +2035,38 @@ export const KependudukanPage: React.FC = () => {
                 <span className="text-slate-400">NIK:</span>
                 <span className="font-mono text-slate-700 dark:text-slate-300">{targetAkunWarga.nikMasked}</span>
               </div>
+              {targetAkunWarga.hasAccount && (
+                <div className="flex justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <span className="text-slate-400">Status Akun:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Aktif ({targetAkunWarga.userRole})</span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSaveAkun} className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label htmlFor="akun-warga-role" className="font-semibold text-slate-700 dark:text-slate-300">
+                  Jabatan / Hak Akses:
+                </label>
+                <select
+                  id="akun-warga-role"
+                  value={akunRole}
+                  onChange={(e) => setAkunRole(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium text-slate-900 dark:text-slate-100"
+                >
+                  <option value="WARGA">Warga Biasa (Akses Aplikasi Warga Mobile)</option>
+                  <option value="KETUA_RT">Ketua RT (Admin Panel - Akses Penuh & Tanda Tangan Surat)</option>
+                  <option value="SEKRETARIS">Sekretaris RT (Admin Panel - Pelayanan Surat & Kependudukan)</option>
+                  <option value="BENDAHARA">Bendahara RT (Admin Panel - Kas & Pembukuan Keuangan RT)</option>
+                  {user?.role === 'SUPERUSER' && (
+                    <option value="SUPERUSER">Superuser / Root Admin (Akses Mutlak Sistem)</option>
+                  )}
+                </select>
+                <p className="text-[10px] text-slate-500">
+                  Akun Ketua RT, Sekretaris, dan Bendahara dapat login ke portal <strong>Admin Panel</strong> ini.
+                </p>
+              </div>
+
               <div className="space-y-1">
                 <label htmlFor="akun-warga-username" className="font-semibold text-slate-700 dark:text-slate-300">
                   Username Login:
@@ -1983,7 +2077,7 @@ export const KependudukanPage: React.FC = () => {
                   type="text"
                   value={akunUsername}
                   onChange={(e) => setAkunUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                  placeholder="Contoh: acil"
+                  placeholder="Contoh: pak_budi"
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-medium"
                   required
                 />
@@ -1992,7 +2086,7 @@ export const KependudukanPage: React.FC = () => {
 
               <div className="space-y-1">
                 <label htmlFor="akun-warga-password" className="font-semibold text-slate-700 dark:text-slate-300">
-                  Password Baru:
+                  {targetAkunWarga.hasAccount ? 'Reset Password (Opsional):' : 'Password Baru:'}
                 </label>
                 <input
                   id="akun-warga-password"
@@ -2000,11 +2094,15 @@ export const KependudukanPage: React.FC = () => {
                   type="text"
                   value={akunPassword}
                   onChange={(e) => setAkunPassword(e.target.value)}
-                  placeholder="Minimal 8 karakter"
+                  placeholder={targetAkunWarga.hasAccount ? 'Kosongkan jika tidak ingin mengubah password' : 'Minimal 8 karakter'}
                   className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none font-mono"
-                  required
+                  required={!targetAkunWarga.hasAccount}
                 />
-                <p className="text-[10px] text-slate-500">Berikan kredensial ini kepada warga untuk masuk ke aplikasi.</p>
+                <p className="text-[10px] text-slate-500">
+                  {targetAkunWarga.hasAccount
+                    ? 'Kosongkan kolom ini jika hanya ingin mengubah jabatan / hak akses.'
+                    : 'Minimal 8 karakter. Berikan kredensial ini kepada pengurus/warga untuk masuk.'}
+                </p>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -2012,7 +2110,7 @@ export const KependudukanPage: React.FC = () => {
                   Batal
                 </Button>
                 <Button variant="primary" size="md" type="submit" isLoading={isCreatingAkun}>
-                  Simpan & Aktifkan Akun
+                  {targetAkunWarga.hasAccount ? 'Simpan Perubahan' : 'Simpan & Aktifkan Akun'}
                 </Button>
               </div>
             </form>

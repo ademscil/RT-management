@@ -217,6 +217,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
       {/* Bottom Profile Controls */}
       <div className="p-3 border-t border-slate-800 space-y-2">
+        {/* Unduh Buku Panduan PDF */}
+        <a
+          href="/BUKU_PANDUAN_PENGGUNA_SIM_RT.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-teal-400 hover:bg-teal-950/40 hover:text-teal-300 transition-colors border border-teal-800/40 ${
+            isCollapsed ? 'justify-center' : ''
+          }`}
+          title="Unduh Buku Panduan Pengguna (PDF)"
+        >
+          <FileText className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Buku Panduan PDF</span>}
+        </a>
+
         {/* User profile info */}
         {!isCollapsed ? (
           <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/60 flex items-center gap-2.5">

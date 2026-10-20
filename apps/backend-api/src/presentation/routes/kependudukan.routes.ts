@@ -87,6 +87,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
               rumah: true,
             },
           },
+          users: true,
         },
       }),
       prisma.warga.count({ where }),
@@ -112,6 +113,9 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       blokRumah: `${w.kk.rumah.kodeBlok} No. ${w.kk.rumah.nomorRumah}`,
       alamatDomisili: w.kk.rumah.alamat,
       statusVerifikasiKk: w.kk.statusVerifikasi,
+      hasAccount: !!w.users,
+      userRole: w.users?.role || null,
+      username: w.users?.username || null,
     }));
 
     return reply.send({
@@ -142,7 +146,14 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
           where,
           skip,
           take: safeLimit,
-          include: { rumah: true, warga: true },
+          include: {
+            rumah: true,
+            warga: {
+              include: {
+                users: true,
+              },
+            },
+          },
         }),
         prisma.kartuKeluarga.count({ where }),
       ]);
@@ -182,6 +193,9 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
           isDisabilitas: w.isDisabilitas,
           isBalita: w.isBalita,
           isIbuHamil: w.isIbuHamil,
+          hasAccount: !!w.users,
+          userRole: w.users?.role || null,
+          username: w.users?.username || null,
         })),
       }));
 
@@ -215,7 +229,13 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { kodeBlok: 'asc' },
         include: {
           kartuKeluarga: {
-            include: { warga: true },
+            include: {
+              warga: {
+                include: {
+                  users: true,
+                },
+              },
+            },
           },
         },
       }),
@@ -262,6 +282,9 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
           isDisabilitas: w.isDisabilitas,
           isBalita: w.isBalita,
           isIbuHamil: w.isIbuHamil,
+          hasAccount: !!w.users,
+          userRole: w.users?.role || null,
+          username: w.users?.username || null,
         })),
       };
     });

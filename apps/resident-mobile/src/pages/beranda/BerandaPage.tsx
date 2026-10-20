@@ -405,6 +405,27 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ onNavigateTab }) => {
               <PhoneCall className="w-3.5 h-3.5" /> Buka Kontak Darurat
             </Button>
           </div>
+
+          {/* User Manual Download Link */}
+          <div className="p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Buku Panduan SIM-RT</h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Petunjuk resmi penggunaan aplikasi</p>
+              </div>
+            </div>
+            <a
+              href="/BUKU_PANDUAN_PENGGUNA_SIM_RT.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold shrink-0 transition-colors"
+            >
+              Unduh PDF
+            </a>
+          </div>
         </div>
       </div>
 

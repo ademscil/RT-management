@@ -478,20 +478,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     '/create-user-account',
     { preHandler: [authenticateJwt, requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
     async (request, reply) => {
-      const { wargaId, username, password } = (request.body as any) || {};
+      const { wargaId, username, password, role } = (request.body as any) || {};
 
-      if (!wargaId || !username || !password) {
+      if (!wargaId || !username) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: 'Warga, username, dan password wajib diisi.' },
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      if (password.length < 8) {
-        return reply.status(400).send({
-          success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: 'Password minimal 8 karakter.' },
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Warga dan username wajib diisi.' },
           timestamp: new Date().toISOString(),
         });
       }
@@ -518,6 +510,22 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      if (!warga.users && (!password || String(password).length < 8)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Password minimal 8 karakter untuk akun baru.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (password && String(password).length > 0 && String(password).length < 8) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: ErrorCode.ERR_VALIDATION, message: 'Password minimal 8 karakter.' },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       const existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
       if (existingUser && existingUser.wargaId !== wargaId) {
         return reply.status(409).send({
@@ -527,30 +535,48 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const passwordHash = await hashPassword(password);
+      // Determine target role with security check
+      let targetRole: UserRole = warga.users ? (warga.users.role as UserRole) : UserRole.WARGA;
+      if (role && Object.values(UserRole).includes(role)) {
+        if (role === UserRole.SUPERUSER && request.userSession?.role !== UserRole.SUPERUSER) {
+          return reply.status(403).send({
+            success: false,
+            error: { code: ErrorCode.ERR_FORBIDDEN, message: 'Hanya Superuser yang dapat menetapkan role Superuser.' },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        targetRole = role as UserRole;
+      }
 
       let user;
       if (warga.users) {
-        // Update password for existing user
+        // Update existing user
+        const updateData: any = {
+          username: cleanUsername,
+          role: targetRole,
+          failedAttempts: 0,
+          lockedUntil: null,
+          isActive: true,
+        };
+
+        if (password && String(password).trim().length >= 8) {
+          updateData.passwordHash = await hashPassword(String(password).trim());
+        }
+
         user = await prisma.user.update({
           where: { id: warga.users.id },
-          data: {
-            username: cleanUsername,
-            passwordHash,
-            failedAttempts: 0,
-            lockedUntil: null,
-            isActive: true,
-          },
+          data: updateData,
         });
       } else {
         // Create new User account and generate recovery codes
+        const passwordHash = await hashPassword(String(password).trim());
         user = await prisma.$transaction(async (tx) => {
           const newUser = await tx.user.create({
             data: {
               wargaId: warga.id,
               username: cleanUsername,
               passwordHash,
-              role: UserRole.WARGA,
+              role: targetRole,
               isActive: true,
             },
           });
