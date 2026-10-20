@@ -41,7 +41,7 @@ const MainLayout: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   // SSE Real-Time listener for resident notifications & API endpoint
-  const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
+  const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-api.vercel.app';
 
   // Initialize Native Android StatusBar (clean separation, dark icons on light app)
   useEffect(() => {

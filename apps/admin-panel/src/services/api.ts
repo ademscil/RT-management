@@ -1,6 +1,6 @@
 import type { ApiResponse } from '@simrt/shared-types';
 
-export const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-six.vercel.app';
+export const API_ORIGIN = (import.meta as any).env?.VITE_API_URL || 'https://rt-management-api.vercel.app';
 
 interface CacheEntry<T> {
   data: T;

@@ -14,4 +14,5 @@ jobs:
     steps:
       - name: Ping SIM-RT Health & DB Keep-Warm
         run: |
-          curl -sS --fail -m 20 "https://rt-management-six.vercel.app/api/v1/health?warm=1" || exit 0
+          curl -sS --fail -m 20 "https://rt-management-api.vercel.app/api/v1/health?warm=1" || exit 0
+

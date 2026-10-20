@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://rt-management-six.vercel.app/api/$1"
+      "destination": "https://rt-management-api.vercel.app/api/$1"
     },
     {
       "source": "/(.*)",
