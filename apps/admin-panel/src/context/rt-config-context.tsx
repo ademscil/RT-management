@@ -49,24 +49,33 @@ export const RtConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const fetchConfig = useCallback(async () => {
     try {
-      // 1. Fetch all registered RTs
-      const listRes = await api.get<any>('/config/rt/list');
-      const listData = Array.isArray(listRes?.data) ? listRes.data : Array.isArray(listRes) ? listRes : [];
-      if (listData.length > 0) {
-        setRtList(listData);
-      }
-
-      // 2. Fetch specific active RT (or first one)
       const currentRtId = localStorage.getItem('simrt_active_rt_id');
       const queryParam = currentRtId ? `?rtId=${currentRtId}` : '';
-      const res = await api.get<any>(`/config/rt${queryParam}`);
-      const data = res?.data || res;
 
-      if (data && data.kodeRt) {
-        setConfig(data);
-        if (data.id) {
-          setActiveRtId(data.id);
-          localStorage.setItem('simrt_active_rt_id', data.id);
+      const [listResult, configResult] = await Promise.allSettled([
+        api.get<any>('/config/rt/list'),
+        api.get<any>(`/config/rt${queryParam}`),
+      ]);
+
+      if (listResult.status === 'fulfilled') {
+        const listData = Array.isArray(listResult.value?.data)
+          ? listResult.value.data
+          : Array.isArray(listResult.value)
+          ? listResult.value
+          : [];
+        if (listData.length > 0) {
+          setRtList(listData);
+        }
+      }
+
+      if (configResult.status === 'fulfilled') {
+        const data = configResult.value?.data || configResult.value;
+        if (data && data.kodeRt) {
+          setConfig(data);
+          if (data.id) {
+            setActiveRtId(data.id);
+            localStorage.setItem('simrt_active_rt_id', data.id);
+          }
         }
       }
     } catch (err) {
