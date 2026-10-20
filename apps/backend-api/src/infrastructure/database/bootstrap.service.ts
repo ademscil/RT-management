@@ -163,7 +163,7 @@ export class BootstrapService {
       for (const kk of house.kartuKeluarga) {
         for (const w of kk.warga) {
           // Delete letters
-          await prisma.permohonanSurat.deleteMany({ where: { wargaId: w.id } }).catch(() => {});
+          await prisma.pengajuanSurat.deleteMany({ where: { wargaId: w.id } }).catch(() => {});
           // Delete user
           await prisma.user.deleteMany({ where: { wargaId: w.id } }).catch(() => {});
           // Delete warga
