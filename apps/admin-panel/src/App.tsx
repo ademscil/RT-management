@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/auth-context.js';
 import { Sidebar, type AdminTab } from './components/layout/sidebar.js';
 import { Header } from './components/layout/header.js';
-import { DashboardPage } from './pages/dashboard.js';
-import { KependudukanPage } from './pages/kependudukan.js';
-import { SuratPage } from './pages/surat.js';
-import { KeuanganPage } from './pages/keuangan.js';
-import { OnboardingPage } from './pages/onboarding.js';
-import { AuditPage } from './pages/audit.js';
-import { LoginPage } from './pages/login.js';
 import { AppToaster, AppErrorBoundary, OfflineModeBanner } from '@simrt/ui-kit';
+
+// Route-based code splitting for instantaneous initial load
+const DashboardPage = lazy(() => import('./pages/dashboard.js').then((m) => ({ default: m.DashboardPage })));
+const KependudukanPage = lazy(() => import('./pages/kependudukan.js').then((m) => ({ default: m.KependudukanPage })));
+const SuratPage = lazy(() => import('./pages/surat.js').then((m) => ({ default: m.SuratPage })));
+const KeuanganPage = lazy(() => import('./pages/keuangan.js').then((m) => ({ default: m.KeuanganPage })));
+const OnboardingPage = lazy(() => import('./pages/onboarding.js').then((m) => ({ default: m.OnboardingPage })));
+const AuditPage = lazy(() => import('./pages/audit.js').then((m) => ({ default: m.AuditPage })));
+const LoginPage = lazy(() => import('./pages/login.js').then((m) => ({ default: m.LoginPage })));
+
+const ModuleFallback: React.FC = () => (
+  <div className="p-12 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-xs font-medium">
+      <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+      <span>Memuat modul sistem...</span>
+    </div>
+  </div>
+);
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -17,9 +28,9 @@ const MainLayout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-teal-500 font-mono text-sm">
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-teal-400 font-mono text-sm">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
           <span>Memuat SIM-RT Command Center...</span>
         </div>
       </div>
@@ -27,7 +38,11 @@ const MainLayout: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return (
+      <Suspense fallback={<ModuleFallback />}>
+        <LoginPage />
+      </Suspense>
+    );
   }
 
   return (
@@ -38,14 +53,16 @@ const MainLayout: React.FC = () => {
         <Header />
         <OfflineModeBanner />
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 scrollbar-slim">
           <AppErrorBoundary fallbackTitle="Terjadi Kesalahan pada Modul ERP Ini">
-            {activeTab === 'dashboard' && <DashboardPage onNavigateTab={setActiveTab} />}
-            {activeTab === 'kependudukan' && <KependudukanPage />}
-            {activeTab === 'surat' && <SuratPage />}
-            {activeTab === 'keuangan' && <KeuanganPage />}
-            {activeTab === 'onboarding' && <OnboardingPage />}
-            {activeTab === 'audit' && <AuditPage />}
+            <Suspense fallback={<ModuleFallback />}>
+              {activeTab === 'dashboard' && <DashboardPage onNavigateTab={setActiveTab} />}
+              {activeTab === 'kependudukan' && <KependudukanPage />}
+              {activeTab === 'surat' && <SuratPage />}
+              {activeTab === 'keuangan' && <KeuanganPage />}
+              {activeTab === 'onboarding' && <OnboardingPage />}
+              {activeTab === 'audit' && <AuditPage />}
+            </Suspense>
           </AppErrorBoundary>
         </main>
       </div>

@@ -52,3 +52,4 @@ Untuk memastikan rancangan antarmuka memiliki cita rasa manusia (*human craftsma
   - Mengintegrasikan Capacitor Haptics (`Haptics.impact({ style: ImpactStyle.Light })`) pada setiap sentuhan tab bottom navigation.
   - Memperhitungkan Safe Area Insets (`env(safe-area-inset-top)` dan `env(safe-area-inset-bottom)`).
   - Tampilan kartu identitas digital berstatus terverifikasi dan tombol darurat kontak siaga yang taktil.
+

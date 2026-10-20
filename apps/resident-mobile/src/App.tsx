@@ -1,12 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/auth-context.js';
-import { LoginPage } from './pages/login/LoginPage.js';
-import { ActivationPage } from './pages/activation/ActivationPage.js';
-import { BerandaPage } from './pages/beranda/BerandaPage.js';
-import { KeluargaPage } from './pages/keluarga/KeluargaPage.js';
-import { SuratPage } from './pages/surat/SuratPage.js';
-import { IuranPage } from './pages/iuran/IuranPage.js';
-import { NotifikasiPage } from './pages/notifikasi/NotifikasiPage.js';
 import { BottomNavigation, TabType } from './components/BottomNavigation.js';
 import { AppLogo } from './components/AppLogo.js';
 import { AppToaster, OfflineModeBanner, useSSE } from '@simrt/ui-kit';
@@ -22,6 +15,24 @@ import {
   MapPin,
   ShieldCheck,
 } from 'lucide-react';
+
+// Lazy load tabs to ensure sub-second startup on mobile Android
+const LoginPage = lazy(() => import('./pages/login/LoginPage.js').then((m) => ({ default: m.LoginPage })));
+const ActivationPage = lazy(() => import('./pages/activation/ActivationPage.js').then((m) => ({ default: m.ActivationPage })));
+const BerandaPage = lazy(() => import('./pages/beranda/BerandaPage.js').then((m) => ({ default: m.BerandaPage })));
+const KeluargaPage = lazy(() => import('./pages/keluarga/KeluargaPage.js').then((m) => ({ default: m.KeluargaPage })));
+const SuratPage = lazy(() => import('./pages/surat/SuratPage.js').then((m) => ({ default: m.SuratPage })));
+const IuranPage = lazy(() => import('./pages/iuran/IuranPage.js').then((m) => ({ default: m.IuranPage })));
+const NotifikasiPage = lazy(() => import('./pages/notifikasi/NotifikasiPage.js').then((m) => ({ default: m.NotifikasiPage })));
+
+const MobileTabFallback: React.FC = () => (
+  <div className="py-16 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-2.5 text-slate-500 text-xs">
+      <div className="w-7 h-7 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+      <span>Memuat data warga...</span>
+    </div>
+  </div>
+);
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading, token, user, logout } = useAuth();
@@ -69,14 +80,14 @@ const MainLayout: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <>
+      <Suspense fallback={<MobileTabFallback />}>
         {authView === 'LOGIN' ? (
           <LoginPage onGoToActivation={() => setAuthView('ACTIVATION')} />
         ) : (
           <ActivationPage onBackToLogin={() => setAuthView('LOGIN')} />
         )}
         <AppToaster position="top-center" />
-      </>
+      </Suspense>
     );
   }
 
@@ -201,13 +212,15 @@ const MainLayout: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Tab Screen Area - Responsive Container */}
+      {/* Main Tab Screen Area - Responsive Container with Suspense Lazy Loading */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-28 md:py-6">
-        {activeTab === 'beranda' && <BerandaPage onNavigateTab={(tab) => setActiveTab(tab)} />}
-        {activeTab === 'keluarga' && <KeluargaPage />}
-        {activeTab === 'surat' && <SuratPage />}
-        {activeTab === 'iuran' && <IuranPage />}
-        {activeTab === 'notifikasi' && <NotifikasiPage />}
+        <Suspense fallback={<MobileTabFallback />}>
+          {activeTab === 'beranda' && <BerandaPage onNavigateTab={(tab) => setActiveTab(tab)} />}
+          {activeTab === 'keluarga' && <KeluargaPage />}
+          {activeTab === 'surat' && <SuratPage />}
+          {activeTab === 'iuran' && <IuranPage />}
+          {activeTab === 'notifikasi' && <NotifikasiPage />}
+        </Suspense>
       </main>
 
       {/* Desktop Civic Footer */}

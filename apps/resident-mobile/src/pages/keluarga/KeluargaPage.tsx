@@ -181,35 +181,36 @@ export const KeluargaPage: React.FC = () => {
         </div>
       ) : familyData ? (
         <div className="space-y-4">
-          {/* Digital KK Card Visual */}
-          <div className="rounded-3xl p-5 bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white shadow-xl border border-teal-800/40 space-y-4">
-            <div className="flex items-center justify-between border-b border-teal-800/50 pb-3">
+          {/* Digital KK Card Visual - Civic Enterprise Benchmark */}
+          <div className="relative rounded-2xl p-5 bg-slate-900 text-white shadow-sm border border-slate-800 space-y-4 overflow-hidden animate-rise-in">
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-teal-500 via-emerald-400 to-blue-500" />
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400 block">
                   REPUBLIK INDONESIA
                 </span>
                 <h3 className="text-sm font-black text-white">KARTU KELUARGA RT 05 / RW 02</h3>
               </div>
-              <div className="p-2 rounded-xl bg-teal-800/40 border border-teal-500/30 text-teal-300">
+              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 text-teal-300 flex items-center justify-center shrink-0">
                 <Shield className="w-5 h-5" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-[10px] text-teal-400 block">Nomor Kartu Keluarga:</span>
+                <span className="text-[10px] text-teal-400 font-semibold block">Nomor Kartu Keluarga:</span>
                 <span className="font-mono font-bold text-white tracking-wider">
                   {familyData.nomorKkMasked}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] text-teal-400 block">Kavling / Blok Rumah:</span>
+                <span className="text-[10px] text-teal-400 font-semibold block">Kavling / Blok Rumah:</span>
                 <span className="font-bold text-white">{familyData.blokRumah}</span>
               </div>
             </div>
 
-            <div className="text-xs border-t border-teal-900/60 pt-2 text-slate-300">
-              <span className="text-[10px] text-teal-400 block">Alamat Terdaftar:</span>
+            <div className="text-xs border-t border-slate-800 pt-2.5 text-slate-300">
+              <span className="text-[10px] text-teal-400 font-semibold block">Alamat Terdaftar:</span>
               <p className="line-clamp-2">{familyData.alamatLengkap}</p>
             </div>
           </div>

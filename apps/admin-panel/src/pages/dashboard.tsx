@@ -127,12 +127,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
 
   return (
     <div className="space-y-6">
-      {/* 1. Greeting & Pending Action Hub */}
-      <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-slate-800">
+      {/* 1. Greeting & Action Hub - Civic Enterprise Benchmark */}
+      <div className="relative bg-slate-900 rounded-2xl p-6 text-white shadow-xs border border-slate-800 overflow-hidden animate-rise-in">
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-teal-500 via-emerald-400 to-blue-500" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+              <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-800 text-teal-300 border border-slate-700">
                 Selamat Datang, {user?.namaLengkap || 'Pengurus RT'}
               </span>
               <span className="text-xs text-slate-400 font-mono">RT 05 / RW 02 Depok</span>

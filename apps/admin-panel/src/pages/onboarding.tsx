@@ -106,7 +106,7 @@ export const OnboardingPage: React.FC = () => {
             Generator Kartu Aktivasi QR Warga Baru
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Zero-MDN Onboarding: Cetak 8 kartu QR per lembar A4 untuk dibagikan secara fisik ke warga
+            Cetak lembar kartu QR aktivasi akun warga (format 8 kartu per lembar A4 siap gunting untuk dibagikan)
           </p>
         </div>
 

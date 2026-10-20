@@ -253,7 +253,7 @@ export const IuranPage: React.FC = () => {
       {activeTab === 'BUKU_KAS' && (
         <div className="space-y-3">
           {/* Integrity Seal Badge */}
-          <div className="p-3 bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-2xl flex items-center justify-between shadow-md">
+          <div className="p-3.5 bg-slate-900 text-white rounded-xl border border-slate-800 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2.5">
               <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
               <div>
