@@ -1,0 +1,10 @@
+{
+  "//": "Type-checks prisma/seed.ts, which lives outside `rootDir: ./src` and therefore cannot join the build graph without breaking the dist layout. Run via `pnpm lint` (see package.json).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "outDir": "./.seed-typecheck"
+  },
+  "include": ["prisma/seed.ts"]
+}

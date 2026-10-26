@@ -13,21 +13,31 @@ import {
   StatusPeminjaman,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getRtId,
+  getTenantContext,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
 
 export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
   fastify.addHook('preHandler', authenticateJwt);
+  fastify.addHook('preHandler', resolveTenantContext);
 
   /**
    * GET /api/v1/operasional/ronda
    */
-  fastify.get('/ronda', async (_request, reply) => {
+  fastify.get('/ronda', async (request, reply) => {
+    const rtId = getRtId(request);
+
     const schedules = await prisma.jadwalRonda.findMany({
+      where: { rtId },
       orderBy: { tanggal: 'asc' },
       take: 30,
     });
 
     const wargaList = await prisma.warga.findMany({
+      where: { rtId },
       select: { id: true, namaLengkap: true, nikMasked: true },
     });
     const wargaMap = new Map(wargaList.map((w) => [w.id, w.namaLengkap]));
@@ -62,7 +72,7 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
@@ -71,6 +81,7 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
 
       const created = await prisma.jadwalRonda.create({
         data: {
+          rtId: getRtId(request),
           tanggal,
           shift,
           pesertaWargaIds: JSON.stringify(pesertaWargaIds),
@@ -89,8 +100,9 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/v1/operasional/inventaris
    */
-  fastify.get('/inventaris', async (_request, reply) => {
+  fastify.get('/inventaris', async (request, reply) => {
     const items = await prisma.inventarisRt.findMany({
+      where: { rtId: getRtId(request) },
       orderBy: { namaBarang: 'asc' },
       include: {
         peminjaman: {
@@ -133,13 +145,16 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
 
       const created = await prisma.inventarisRt.create({
-        data: parseResult.data,
+        data: {
+          ...parseResult.data,
+          rtId: getRtId(request),
+        },
       });
 
       return reply.send({
@@ -158,16 +173,18 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
 
     const { inventarisId, jumlah, tanggalPinjam, tanggalRencanaKembali, keperluan } = parseResult.data;
     const session = request.userSession!;
+    const tenant = getTenantContext(request);
 
     const item = await prisma.inventarisRt.findUnique({ where: { id: inventarisId } });
-    if (!item) {
+    // Anti-IDOR: an item belonging to another RT is reported as not found.
+    if (!item || item.rtId !== tenant.rtId) {
       return reply.status(404).send({
         success: false,
         error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Barang inventaris tidak ditemukan.' },
@@ -177,6 +194,7 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
 
     const created = await prisma.peminjamanInventaris.create({
       data: {
+        rtId: tenant.rtId,
         inventarisId,
         peminjamWargaId: session.wargaId,
         jumlah,
@@ -202,7 +220,7 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
@@ -210,7 +228,8 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
     const { page, limit, status, search } = parseResult.data;
     const session = request.userSession!;
 
-    const where: Record<string, unknown> = {};
+    // TENANT SCOPE — previously this listed complaint tickets from every RT.
+    const where: Record<string, unknown> = { rtId: getRtId(request) };
     if (session.role === UserRole.WARGA) {
       where.pelaporWargaId = session.wargaId;
     }
@@ -264,7 +283,7 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
@@ -274,6 +293,7 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
 
     const created = await prisma.tiketAduan.create({
       data: {
+        rtId: getRtId(request),
         pelaporWargaId: session.wargaId,
         kategori,
         judul,
@@ -289,3 +309,4 @@ export const operasionalRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 };
+

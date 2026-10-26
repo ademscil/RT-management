@@ -2,6 +2,43 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+# ==============================================================================
+# SECURITY OVERRIDES
+# ==============================================================================
+# CRITICAL: pnpm >= 10 reads overrides from THIS file, not from
+# `package.json → pnpm.overrides`. The latter is silently ignored, which is how
+# this repo previously shipped believing it had pinned `fast-jwt >=6.3.0` while
+# actually resolving `fast-jwt@5.0.6` — a version carrying a JWT auth bypass and
+# an algorithm-confusion advisory. `fast-jwt` is what verifies the signed `rtId`
+# claim the entire multi-tenant model depends on, so this pin is load-bearing.
+#
+# Verify after any install:
+#   pnpm why fast-jwt
+#   pnpm audit --audit-level=moderate
+overrides:
+  # JWT verify/sign — GHSA-gmvf-9v4p-v8jc (auth bypass), GHSA-rp9m-7r4c-75qg,
+  # GHSA-mvf2-f6gm-w987 (algorithm confusion).
+  'fast-jwt': '>=6.3.0'
+  # Archive extraction — multiple decompression DoS advisories.
+  tar: '>=7.5.21'
+  # Image pipeline.
+  sharp: '>=0.35.5'
+  # Prototype-pollution gadgets.
+  'deepmerge-ts': '>=8.0.0'
+  # vitest worker pool — prototype pollution leading to RCE.
+  tinypool: '>=2.1.2'
+  # URI scheme spoofing via percent-encoded scheme decoding (GHSA-w74x-v6f9-j3xg,
+  # GHSA-wjr9-j795-jxcr). Resolved via fastify→ajv→fast-uri chain.
+  'fast-uri': '>=4.2.3'
+  # zod — GHSA-mrhx-c7xc-m3w5.
+  zod: '>=4.6.6'
+  # vitest / @vitest/mocker — code injection via unauthenticated manual mock
+  # registration (GHSA-82fw-gwwq-j7x9, GHSA-qxg6-89mg-rqv8).
+  vitest: '>=4.1.12'
+  '@vitest/mocker': '>=4.1.12'
+  # postcss-selector-parser — GHSA-rj75-hqrm-r3gf.
+  'postcss-selector-parser': '>=7.1.6'
+
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true

@@ -1,18 +1,22 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
-import { HashChainService } from '../../infrastructure/ledger/hash-chain.service.js';
+import { AuditLogService } from '../../infrastructure/ledger/audit-log.service.js';
 import {
   PaginationQuerySchema,
   buildPaginationMeta,
   UserRole,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getRtId,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
 
 export const auditRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
-  const hashChainService = new HashChainService();
 
   fastify.addHook('preHandler', authenticateJwt);
+  fastify.addHook('preHandler', resolveTenantContext);
   fastify.addHook('preHandler', requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS]));
 
   /**
@@ -24,7 +28,9 @@ export const auditRoutes: FastifyPluginAsync = async (fastify) => {
       ? parseResult.data
       : { page: 1, limit: 10, search: undefined };
 
-    const where: Record<string, unknown> = {};
+    // TENANT SCOPE — the audit trail is per RT. An empty `where` here exposed
+    // every community's PII-access history (who opened whose NIK, from which IP).
+    const where: Record<string, unknown> = { rtId: getRtId(request) };
     if (search) {
       where.OR = [
         { actionType: { contains: search, mode: 'insensitive' } },
@@ -41,13 +47,14 @@ export const auditRoutes: FastifyPluginAsync = async (fastify) => {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { sequence: 'desc' },
       }),
       prisma.securityAuditLog.count({ where }),
     ]);
 
     const formatted = items.map((l) => ({
       id: l.id,
+      sequence: l.sequence,
       actorUserId: l.actorUserId,
       actorRole: l.actorRole,
       actionType: l.actionType,
@@ -74,21 +81,11 @@ export const auditRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/v1/audit/verify-chain (Verify Mathematical Integrity of Security Audit Logs)
    */
-  fastify.get('/verify-chain', async (_request, reply) => {
-    const logs = await prisma.securityAuditLog.findMany({
-      orderBy: { createdAt: 'asc' },
-    });
-
-    const mapped = logs.map((l) => ({
-      id: l.id,
-      actorId: l.actorUserId,
-      actionOrNominal: `${l.actionType}:${l.targetId}:${l.accessReason || ''}`,
-      timestampIso: l.createdAt.toISOString(),
-      prevHash: l.prevHash,
-      rowHash: l.rowHash,
-    }));
-
-    const result = hashChainService.verifyChain(mapped);
+  fastify.get('/verify-chain', async (request, reply) => {
+    // Verify ONLY this tenant's chain. Audit chains are independent per RT, so a
+    // global "verify all rows" walk reports a false tamper verdict as soon as a
+    // second community appends anything.
+    const result = await AuditLogService.verifyTenantChain(prisma, getRtId(request));
 
     return reply.send({
       success: true,

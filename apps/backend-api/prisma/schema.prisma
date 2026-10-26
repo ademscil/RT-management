@@ -7,106 +7,357 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Rukun Tetangga Configuration
+// ==============================================================================
+// 1. TENANT — Rukun Tetangga (THE multi-tenancy root)
+// ==============================================================================
+// `RukunTetanggaConfig` IS the tenant. Its `id` is the canonical `rtId` used by
+// every tenant-scoped table and by the JWT `rtId` claim.
+//
+// Identity namespace: `slug` is globally unique and immutable in practice.
+// `kodeRt`/`kodeRw` are NOT unique on their own — the very same "RT 05 / RW 02"
+// exists in thousands of Indonesian kelurahan. Uniqueness is therefore scoped by
+// (kodeRt, kodeRw, namaKelurahan, namaKota).
+// ==============================================================================
 model RukunTetanggaConfig {
-  id                    String   @id @default(uuid())
-  kodeRt                String   @default("05")
-  kodeRw                String   @default("02")
-  namaKelurahan         String   @default("Sukamaju")
-  namaKecamatan         String   @default("Cilodong")
-  namaKota              String   @default("Kota Depok")
-  kodePos               String   @default("16415")
-  ed25519PublicKey      String   @default("")
-  ed25519PrivateKeyEnc  String   @default("")
-  logoMinioKey          String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  slug                 String   @unique
+  kodeRt               String   @default("05")
+  kodeRw               String   @default("02")
+  namaKelurahan        String   @default("Sukamaju")
+  namaKecamatan        String   @default("Cilodong")
+  namaKota             String   @default("Kota Depok")
+  kodePos              String   @default("16415")
 
+  /// TenantStatus: ACTIVE | PENDING | SUSPENDED | ARCHIVED
+  status               String   @default("ACTIVE")
+  /// PlanCode: FREE | PRO_RT | ENTERPRISE_KELURAHAN
+  planCode             String   @default("FREE")
+
+  ed25519PublicKey     String   @default("")
+  ed25519PrivateKeyEnc String   @default("")
+  logoMinioKey         String?
+
+  /// ENTERPRISE consolidation: this RT belongs to a parent RW/Kelurahan tenant.
+  parentTenantId       String?
+  parentTenant         RukunTetanggaConfig?  @relation("TenantHierarchy", fields: [parentTenantId], references: [id], onDelete: SetNull)
+  childTenants         RukunTetanggaConfig[] @relation("TenantHierarchy")
+
+  subscription         TenantSubscription?
+  invoices             SubscriptionInvoice[]
+
+  // --- Tenant-scoped back-relations ---
+  rumahKavling         RumahKavling[]
+  kartuKeluarga        KartuKeluarga[]
+  warga                Warga[]
+  dokumenVault         DokumenVault[]
+  mutasiLogs           MutasiWargaLog[]
+  users                User[]
+  onboardingInvites    OnboardingInvite[]
+  recoveryCodes        RecoveryCode[]
+  jenisSuratTemplates  JenisSuratTemplate[]
+  pengajuanSurat       PengajuanSurat[]
+  posKeuangan          PosKeuangan[]
+  tagihanIuran         TagihanIuran[]
+  kasLedger            KasLedgerImmutable[]
+  jadwalRonda          JadwalRonda[]
+  inventaris           InventarisRt[]
+  peminjamanInventaris PeminjamanInventaris[]
+  tiketAduan           TiketAduan[]
+  notifications        InAppNotification[]
+  auditLogs            SecurityAuditLog[]
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([kodeRt, kodeRw, namaKelurahan, namaKota])
+  @@index([status])
+  @@index([planCode])
+  @@index([parentTenantId])
   @@map("rukun_tetangga_config")
 }
 
-// 2. Rumah / Kavling
-model RumahKavling {
-  id               String            @id @default(uuid())
-  kodeBlok         String            @unique
-  nomorRumah       String
-  alamat           String
-  gridX            Int               @default(0)
-  gridY            Int               @default(0)
-  statusHunian     String            @default("DIHUNI_PEMILIK") // DIHUNI_PEMILIK, DIHUNI_PENYEWA, KOSONG
-  hasVulnerability Boolean           @default(false)
-  kartuKeluarga    KartuKeluarga[]
-  tagihanIuran     TagihanIuran[]
-  onboardingInvites OnboardingInvite[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+// ==============================================================================
+// 2. SAAS BILLING — Plan catalogue, subscriptions, invoices, webhook ledger
+// ==============================================================================
 
-  @@index([statusHunian])
+/// Global plan catalogue. Mirrors `PLAN_CATALOGUE` in @simrt/shared-types so
+/// commercial pricing can be adjusted by ops WITHOUT a code deploy.
+/// NOT tenant-scoped — one row per sellable plan.
+model SubscriptionPlan {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  name             String
+  tagline          String   @default("")
+  midtransSku      String   @unique
+  /// Price per month in IDR. 0 for the free tier.
+  priceIdr         Int      @default(0)
+  /// BillingCycle: MONTHLY | QUARTERLY | ANNUAL | LIFETIME
+  billingCycle     String   @default("MONTHLY")
+
+  /// Quota matrix. `null` = unlimited.
+  maxKartuKeluarga Int?
+  maxWarga         Int?
+  maxAdminUsers    Int?
+  maxStorageMb     Int?
+  maxChildTenants  Int      @default(0)
+
+  /// JSON array of TenantFeature strings unlocked by this plan.
+  featuresJson     String   @default("[]")
+  isPublic         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+
+  subscriptions    TenantSubscription[]
+  invoices         SubscriptionInvoice[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isPublic])
+  @@index([sortOrder])
+  @@map("subscription_plans")
+}
+
+/// One active subscription record per tenant (1:1 with RukunTetanggaConfig).
+model TenantSubscription {
+  id                String              @id @default(uuid())
+  rtId              String              @unique
+  rt                RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  planId            String
+  plan              SubscriptionPlan    @relation(fields: [planId], references: [id])
+  planCode          String
+
+  /// SubscriptionStatus: ACTIVE | GRACE_PERIOD | EXPIRED | TRIALING | CANCELLED
+  status            String              @default("ACTIVE")
+  billingCycle      String              @default("MONTHLY")
+  startedAt         DateTime            @default(now())
+  /// `null` for LIFETIME (FREE tier).
+  endsAt            DateTime?
+  /// Hard-suspension deadline once `endsAt` has passed.
+  gracePeriodEndsAt DateTime?
+  autoRenew         Boolean             @default(false)
+  /// Midtrans reference when recurring tokens are issued.
+  externalRef       String?
+  cancelledAt       DateTime?
+  lastRenewedAt     DateTime?
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status])
+  @@index([endsAt])
+  @@index([planCode])
+  @@map("tenant_subscriptions")
+}
+
+/// A single billing invoice for a tenant subscription.
+/// `midtransOrderId` is deterministic (derived from `invoiceNumber`), so a
+/// retried checkout for the same invoice cannot double-charge.
+model SubscriptionInvoice {
+  id                 String              @id @default(uuid())
+  rtId               String
+  rt                 RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               SubscriptionPlan    @relation(fields: [planId], references: [id])
+
+  invoiceNumber      String              @unique
+  midtransOrderId    String              @unique
+  /// Encryption-at-rest envelope for persisted gateway payloads.
+  /// Format: v1:base64(iv):base64(authTag):base64(ciphertext)
+  paymentPayloadEnc  String?
+
+  planCode           String
+  billingCycle       String              @default("MONTHLY")
+  quantityCycles     Int                 @default(1)
+  /// InvoiceStatus: PENDING | PAID | EXPIRED | FAILED | REFUNDED
+  status             String              @default("PENDING")
+  /// PaymentChannel: QRIS | BCA_VA | MANDIRI_BILL | SNAP | MANUAL_TRANSFER
+  channel            String              @default("QRIS")
+
+  unitPriceIdr       Int
+  subtotalIdr        Int
+  discountIdr        Int                 @default(0)
+  taxIdr             Int                 @default(0)
+  amountIdr          BigInt
+  currency           String              @default("IDR")
+
+  paymentQrString    String?             @db.Text
+  paymentVaNumber    String?
+  paymentRedirectUrl String?
+
+  midtransTransactionId String?
+  /// Raw Midtrans `transaction_status` of the last processed event.
+  midtransStatus     String?
+
+  paidAt             DateTime?
+  expiresAt          DateTime?
+  verifiedByUserId   String?
+  catatan            String?
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([rtId])
+  @@index([status])
+  @@index([planCode])
+  @@index([createdAt])
+  @@map("subscription_invoices")
+}
+
+/// Idempotency ledger for payment gateway webhooks.
+///
+/// A webhook is identified by `(provider, eventKey)` where `eventKey` is the
+/// gateway's own transaction identity (order_id + transaction_id + status_code).
+/// A replay of an already-applied event hits the unique constraint and is
+/// acknowledged WITHOUT re-applying side effects — this is what makes
+/// auto-renewal safe against Midtrans' at-least-once delivery semantics.
+model PaymentWebhookEvent {
+  id                String   @id @default(uuid())
+  provider          String   @default("midtrans")
+  eventKey          String
+  /// SHA-512 signature supplied by the gateway (`x-signature` header).
+  signature         String?
+  orderId           String?
+  transactionId     String?
+  statusCode        String?
+  /// Midtrans `transaction_status` as received.
+  transactionStatus String?
+  grossAmount       String?
+  paymentType       String?
+  /// Resolved internal InvoiceStatus (`null` when the order was unknown).
+  resolvedStatus    String?
+
+  /// Soft references (no FK) so a webhook for an unknown/foreign order id is
+  /// still recorded for forensic replay analysis.
+  rtId              String?
+  invoiceId         String?
+
+  /// Delivery attempt counter — Midtrans retries until it receives HTTP 200.
+  deliveryCount     Int      @default(1)
+  processedAt       DateTime @default(now())
+  /// SHA-256 of the raw request body, for tamper forensics.
+  rawBodyHash       String?
+  /// Set when the event was rejected (bad signature, unknown order).
+  rejectedReason    String?
+
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, eventKey])
+  @@index([orderId])
+  @@index([invoiceId])
+  @@index([rtId])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("payment_webhook_events")
+}
+
+// ==============================================================================
+// 3. TENANT-SCOPED DOMAIN — every model below carries `rtId`
+// ==============================================================================
+
+/// Rumah / Kavling.
+/// TENANCY FIX: `kodeBlok` was globally unique, so "A1" in RT Pangkalpinang
+/// collided with "A1" in RT Depok. Uniqueness is now per-tenant.
+model RumahKavling {
+  id                String   @id @default(uuid())
+  rtId              String
+  rt                RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  kodeBlok          String
+  nomorRumah        String
+  alamat            String
+  gridX             Int      @default(0)
+  gridY             Int      @default(0)
+  statusHunian      String   @default("DIHUNI_PEMILIK") // DIHUNI_PEMILIK, DIHUNI_PENYEWA, KOSONG
+  hasVulnerability  Boolean  @default(false)
+
+  kartuKeluarga     KartuKeluarga[]
+  tagihanIuran      TagihanIuran[]
+  onboardingInvites OnboardingInvite[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([rtId, kodeBlok])
+  @@index([rtId])
+  @@index([rtId, statusHunian])
   @@index([hasVulnerability])
   @@map("rumah_kavling")
 }
 
-// 3. Kartu Keluarga (RLS Enabled)
+/// Kartu Keluarga (RLS Enabled).
+/// TENANCY FIX: `noKkBlindIndex` was globally unique — the SAME family legitimately
+/// appears in two RTs after relocating. Blind index uniqueness is per-tenant.
 model KartuKeluarga {
-  id               String             @id @default(uuid())
-  rumahId          String
-  rumah            RumahKavling       @relation(fields: [rumahId], references: [id], onDelete: Cascade)
-  noKkEncrypted    String
-  noKkBlindIndex   String             @unique
-  noKkMasked       String
-  keyVersion       String             @default("v1")
-  statusDomisili   String             @default("TETAP")
-  statusVerifikasi String             @default("PENDING") // PENDING, VERIFIED, REVISION_REQUESTED, REJECTED
-  catatanRevisi    String?
-  warga            Warga[]
-  dokumenVault     DokumenVault[]
-  pengajuanSurat   PengajuanSurat[]
-  tagihanIuran     TagihanIuran[]
-  onboardingInvites OnboardingInvite[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                String   @id @default(uuid())
+  rtId              String
+  rt                RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  rumahId           String
+  rumah             RumahKavling @relation(fields: [rumahId], references: [id], onDelete: Cascade)
+  noKkEncrypted     String
+  noKkBlindIndex    String
+  noKkMasked        String
+  keyVersion        String   @default("v1")
+  statusDomisili    String   @default("TETAP")
+  statusVerifikasi  String   @default("PENDING") // PENDING, VERIFIED, REVISION_REQUESTED, REJECTED
+  catatanRevisi     String?
 
+  warga             Warga[]
+  dokumenVault      DokumenVault[]
+  pengajuanSurat    PengajuanSurat[]
+  tagihanIuran      TagihanIuran[]
+  onboardingInvites OnboardingInvite[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([rtId, noKkBlindIndex])
+  @@index([rtId])
   @@index([rumahId])
-  @@index([noKkBlindIndex])
-  @@index([statusVerifikasi])
+  @@index([rtId, statusVerifikasi])
   @@map("kartu_keluarga")
 }
 
-// 4. Warga (RLS Enabled)
+/// Warga (RLS Enabled).
+/// TENANCY FIX: `nikBlindIndex` was globally unique — the same citizen can hold
+/// residency records in multiple RTs (e.g. KTP at RT A, domicile at RT B).
 model Warga {
-  id                  String             @id @default(uuid())
-  kkId                String
-  kk                  KartuKeluarga      @relation(fields: [kkId], references: [id], onDelete: Cascade)
-  nikEncrypted        String
-  nikBlindIndex       String             @unique
-  nikMasked           String
-  keyVersion          String             @default("v1")
-  namaLengkap         String
-  tempatLahir         String
-  tanggalLahir        String
-  gender              String
-  golonganDarah       String             @default("TIDAK_TAHU")
-  agama               String
-  pendidikanTerakhir  String             @default("SMA/Sederajat")
-  pekerjaan           String             @default("Karyawan Swasta")
-  statusPerkawinan    String
-  hubunganKeluarga    String
-  statusKependudukan  String             @default("TETAP")
-  isLansia            Boolean            @default(false)
-  isDisabilitas       Boolean            @default(false)
-  isBalita            Boolean            @default(false)
-  isIbuHamil          Boolean            @default(false)
-  users               User?
-  dokumenVault        DokumenVault[]
-  pengajuanSurat      PengajuanSurat[]
-  mutasiLogs          MutasiWargaLog[]
-  peminjaman          PeminjamanInventaris[]
-  tiketAduan          TiketAduan[]
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  id                 String   @id @default(uuid())
+  rtId               String
+  rt                 RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  kkId               String
+  kk                 KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  nikEncrypted       String
+  nikBlindIndex      String
+  nikMasked          String
+  keyVersion         String   @default("v1")
+  namaLengkap        String
+  tempatLahir        String
+  tanggalLahir       String
+  gender             String
+  golonganDarah      String   @default("TIDAK_TAHU")
+  agama              String
+  pendidikanTerakhir String   @default("SMA/Sederajat")
+  pekerjaan          String   @default("Karyawan Swasta")
+  statusPerkawinan   String
+  hubunganKeluarga   String
+  statusKependudukan String   @default("TETAP")
+  isLansia           Boolean  @default(false)
+  isDisabilitas      Boolean  @default(false)
+  isBalita           Boolean  @default(false)
+  isIbuHamil         Boolean  @default(false)
 
+  users              User?
+  dokumenVault       DokumenVault[]
+  pengajuanSurat     PengajuanSurat[]
+  mutasiLogs         MutasiWargaLog[]
+  peminjaman         PeminjamanInventaris[]
+  tiketAduan         TiketAduan[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([rtId, nikBlindIndex])
+  @@index([rtId])
   @@index([kkId])
-  @@index([nikBlindIndex])
   @@index([golonganDarah])
   @@index([isLansia])
   @@index([isDisabilitas])
@@ -115,33 +366,42 @@ model Warga {
   @@map("warga")
 }
 
-// 5. Dokumen Vault (Encrypted DEK + Envelope Encryption - RLS Enabled)
+/// Dokumen Vault — Envelope-encrypted blobs (RLS Enabled).
 model DokumenVault {
   id               String        @id @default(uuid())
+  rtId             String
+  rt               RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   pemilikWargaId   String
   pemilikWarga     Warga         @relation(fields: [pemilikWargaId], references: [id], onDelete: Cascade)
   kkId             String
   kk               KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
   jenisDokumen     String        // KTP, KK, BUKTI_DOMISILI, SURAT_NIKAH
   minioKey         String
-  encryptedDek     String        // Encrypted with Master KEK
+  /// DEK wrapped by the master KEK (key_version aware).
+  encryptedDek     String
   encryptionIv     String
   authTag          String
   keyVersion       String        @default("v1")
   sha256Hash       String
   statusVerifikasi String        @default("PENDING")
+  /// Byte size of the stored ciphertext — used for per-tenant storage quota.
+  sizeBytes        Int           @default(0)
+
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
+  @@index([rtId])
+  @@index([rtId, jenisDokumen])
   @@index([pemilikWargaId])
   @@index([kkId])
-  @@index([jenisDokumen])
   @@map("dokumen_vault")
 }
 
-// 6. Mutasi Warga Logs
+/// Mutasi Warga Logs (movement in/out, birth, death).
 model MutasiWargaLog {
   id                 String   @id @default(uuid())
+  rtId               String
+  rt                 RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   wargaId            String
   warga              Warga    @relation(fields: [wargaId], references: [id], onDelete: Cascade)
   jenisMutasi        String   // PINDAH_MASUK, PINDAH_KELUAR, KELAHIRAN, KEMATIAN
@@ -149,130 +409,174 @@ model MutasiWargaLog {
   dokumenPendukungId String?
   keterangan         String?
   dicatatOlehUserId  String
+
   createdAt          DateTime @default(now())
 
+  @@index([rtId])
   @@index([wargaId])
-  @@index([jenisMutasi])
+  @@index([rtId, jenisMutasi])
   @@map("mutasi_warga_logs")
 }
 
-// 7. Users (Argon2id Hashed)
+/// Users (Argon2id hashed).
+/// TENANCY FIX: `username` was globally unique, which let one RT squat on a
+/// username another RT wanted, and made a cross-tenant `findUnique({username})`
+/// in the login path possible. Uniqueness is now per-tenant.
 model User {
-  id              String            @id @default(uuid())
-  wargaId         String            @unique
-  warga           Warga             @relation(fields: [wargaId], references: [id], onDelete: Cascade)
-  username        String            @unique
-  passwordHash    String
-  role            String            @default("WARGA") // KETUA_RT, SEKRETARIS, BENDAHARA, WARGA
-  isActive        Boolean           @default(true)
-  failedAttempts  Int               @default(0)
-  lockedUntil     DateTime?
-  lastActiveAt    DateTime?
-  recoveryCodes   RecoveryCode[]
-  notifications   InAppNotification[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String   @id @default(uuid())
+  rtId           String
+  rt             RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  wargaId        String   @unique
+  warga          Warga    @relation(fields: [wargaId], references: [id], onDelete: Cascade)
+  username       String
+  passwordHash   String
+  role           String   @default("WARGA") // SUPERUSER, KETUA_RT, SEKRETARIS, BENDAHARA, WARGA
+  isActive       Boolean  @default(true)
+  failedAttempts Int      @default(0)
+  lockedUntil    DateTime?
+  lastActiveAt   DateTime?
 
+  recoveryCodes  RecoveryCode[]
+  notifications  InAppNotification[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([rtId, username])
+  @@index([rtId])
   @@index([username])
-  @@index([role])
+  @@index([rtId, role])
   @@map("users")
 }
 
-// 8. Onboarding Invites (One-time QR Code Token)
+/// Onboarding Invites — one-time QR activation token.
+/// `tokenHash` stays globally unique: the token itself is a high-entropy random
+/// value, so a global namespace is correct and prevents cross-tenant collisions.
 model OnboardingInvite {
-  id               String        @id @default(uuid())
-  kkId             String
-  kk               KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
-  rumahId          String
-  rumah            RumahKavling  @relation(fields: [rumahId], references: [id], onDelete: Cascade)
-  tokenHash        String        @unique
-  tokenMasked      String
-  expiresAt        DateTime
-  isClaimed        Boolean       @default(false)
-  claimedByUserId  String?
-  claimedAt        DateTime?
-  createdAt        DateTime      @default(now())
+  id              String        @id @default(uuid())
+  rtId            String
+  rt              RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  kkId            String
+  kk              KartuKeluarga @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  rumahId         String
+  rumah           RumahKavling  @relation(fields: [rumahId], references: [id], onDelete: Cascade)
+  tokenHash       String        @unique
+  tokenMasked     String
+  expiresAt       DateTime
+  isClaimed       Boolean       @default(false)
+  claimedByUserId String?
+  claimedAt       DateTime?
 
+  createdAt       DateTime      @default(now())
+
+  @@index([rtId])
   @@index([tokenHash])
   @@index([isClaimed])
   @@map("onboarding_invites")
 }
 
-// 9. Recovery Codes (Offline 8-Digit Backup)
+/// Recovery Codes — offline 8-digit emergency backup.
 model RecoveryCode {
   id        String    @id @default(uuid())
+  rtId      String
+  rt        RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   codeHash  String
   isUsed    Boolean   @default(false)
   usedAt    DateTime?
+
   createdAt DateTime  @default(now())
 
+  @@index([rtId])
   @@index([userId])
   @@index([isUsed])
   @@map("recovery_codes")
 }
 
-// 10. Jenis Surat Templates
+/// Letter type templates (E-Surat).
+/// `formatNomor` embeds the RT code, so templates are strictly per-tenant.
 model JenisSuratTemplate {
   id             String           @id @default(uuid())
-  kodeSurat      String           @unique
+  rtId           String
+  rt             RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  kodeSurat      String
   namaSurat      String
   formatNomor    String           @default("{NO}/RT05-RW02/{BULAN}/{TAHUN}")
   templateHtml   String           @default("")
-  syaratDokumen  String           @default("[]") // JSON string of required docs
+  syaratDokumen  String           @default("[]") // JSON array of required docs
+
   pengajuanSurat PengajuanSurat[]
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+  @@unique([rtId, kodeSurat])
+  @@index([rtId])
   @@map("jenis_surat_templates")
 }
 
-// 11. Pengajuan Surat (RLS Enabled)
+/// Pengajuan Surat (RLS Enabled). Tanda tangan digital Ed25519 per tenant.
 model PengajuanSurat {
-  id                 String             @id @default(uuid())
-  nomorTiket         String             @unique
-  nomorSuratResmi    String?
-  pemohonWargaId     String
-  pemohonWarga       Warga              @relation(fields: [pemohonWargaId], references: [id], onDelete: Cascade)
-  kkId               String
-  kk                 KartuKeluarga      @relation(fields: [kkId], references: [id], onDelete: Cascade)
-  jenisSuratId       String
-  jenisSurat         JenisSuratTemplate @relation(fields: [jenisSuratId], references: [id])
-  keperluan          String
-  status             String             @default("DRAFT") // DRAFT, SUBMITTED, VERIFIED_SEKRETARIS, SIGNED_KETUA_RT, REJECTED, CANCELLED
-  catatanRevisi      String?
-  verifiedByUserId   String?
-  signedByUserId     String?
+  id                  String             @id @default(uuid())
+  rtId                String
+  rt                  RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  nomorTiket          String
+  nomorSuratResmi     String?
+  pemohonWargaId      String
+  pemohonWarga        Warga              @relation(fields: [pemohonWargaId], references: [id], onDelete: Cascade)
+  kkId                String
+  kk                  KartuKeluarga      @relation(fields: [kkId], references: [id], onDelete: Cascade)
+  jenisSuratId        String
+  jenisSurat          JenisSuratTemplate @relation(fields: [jenisSuratId], references: [id])
+  keperluan           String
+  status              String             @default("DRAFT") // DRAFT, SUBMITTED, VERIFIED_SEKRETARIS, SIGNED_KETUA_RT, REJECTED, CANCELLED
+  catatanRevisi       String?
+  verifiedByUserId    String?
+  signedByUserId      String?
   ed25519SignatureHex String?
-  verificationHash   String?
-  pdfMinioKey        String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  verificationHash    String?
+  pdfMinioKey         String?
 
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@unique([rtId, nomorTiket])
+  @@index([rtId])
   @@index([pemohonWargaId])
   @@index([kkId])
-  @@index([status])
-  @@index([nomorTiket])
+  @@index([rtId, status])
   @@map("pengajuan_surat")
 }
 
-// 12. Pos Keuangan
+/// Pos Keuangan — cash ledger accounts.
+/// TENANCY FIX: `kodePosKas` was globally unique; each RT owns its own chart of
+/// accounts, so uniqueness is per-tenant.
 model PosKeuangan {
-  id            String               @id @default(uuid())
-  kodePosKas    String               @unique
+  id            String   @id @default(uuid())
+  rtId          String
+  rt            RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  kodePosKas    String
   namaPos       String
-  saldoBerjalan BigInt               @default(0)
-  kasLedger     KasLedgerImmutable[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  saldoBerjalan BigInt   @default(0)
 
+  kasLedger     KasLedgerImmutable[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([rtId, kodePosKas])
+  @@index([rtId])
   @@map("pos_keuangan")
 }
 
-// 13. Tagihan Iuran (RLS Enabled)
+/// Tagihan Iuran (RLS Enabled).
+/// TENANCY FIX: one bill per (house, month, year) is now enforced per tenant,
+/// which also makes monthly bill generation idempotent under concurrency.
 model TagihanIuran {
   id                 String        @id @default(uuid())
+  rtId               String
+  rt                 RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   rumahId            String
   rumah              RumahKavling  @relation(fields: [rumahId], references: [id], onDelete: Cascade)
   kkId               String
@@ -285,70 +589,98 @@ model TagihanIuran {
   alasanPenolakan    String?
   verifiedByUserId   String?
   paidAt             DateTime?
+
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
+  @@unique([rtId, rumahId, bulan, tahun])
+  @@index([rtId])
   @@index([rumahId])
   @@index([kkId])
-  @@index([status])
+  @@index([rtId, status])
   @@index([bulan, tahun])
   @@map("tagihan_iuran")
 }
 
-// 14. Kas Ledger Immutable (Hash-Chained Anti-Tamper)
+/// Kas Ledger Immutable — hash-chained, anti-tamper.
+/// TENANCY FIX: the SHA-256 chain is now per-tenant (`sequence` + `rtId`). A
+/// single global chain let one tenant's insert invalidate another's chain, and
+/// made the ledger's `prevHash` lookup cross tenant boundaries.
 model KasLedgerImmutable {
-  id                 String      @id @default(uuid())
-  posKeuanganId      String
-  posKeuangan        PosKeuangan @relation(fields: [posKeuanganId], references: [id])
-  tipe               String      // IN, OUT
-  nominal            BigInt
-  saldoSetelah       BigInt
-  deskripsi          String
-  buktiNotaMinioKey  String?
-  createdByUserId    String
-  approvedByUserId   String?
-  prevHash           String
-  rowHash            String
-  createdAt          DateTime    @default(now())
+  id                String      @id @default(uuid())
+  rtId              String
+  rt                RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  /// Monotonic position within this tenant's chain (1-based).
+  sequence          Int         @default(0)
+  posKeuanganId     String
+  posKeuangan       PosKeuangan @relation(fields: [posKeuanganId], references: [id])
+  tipe              String      // IN, OUT
+  nominal           BigInt
+  saldoSetelah      BigInt
+  deskripsi         String
+  buktiNotaMinioKey String?
+  createdByUserId   String
+  approvedByUserId  String?
+  prevHash          String
+  rowHash           String
 
+  createdAt         DateTime    @default(now())
+
+  @@unique([rtId, sequence])
+  @@index([rtId])
+  @@index([rtId, createdAt])
   @@index([posKeuanganId])
   @@index([rowHash])
-  @@index([createdAt])
   @@map("kas_ledger_immutable")
 }
 
-// 15. Jadwal Ronda
+/// Jadwal Ronda — night patrol schedule.
 model JadwalRonda {
   id              String   @id @default(uuid())
+  rtId            String
+  rt              RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   tanggal         String
   shift           String   @default("Malam (22:00 - 04:00)")
   keterangan      String?
-  pesertaWargaIds String   @default("[]") // JSON Array string of Warga UUIDs
+  /// JSON array of Warga UUIDs on duty. All MUST belong to `rtId`.
+  pesertaWargaIds String   @default("[]")
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@index([tanggal])
+  @@index([rtId])
+  @@index([rtId, tanggal])
   @@map("jadwal_ronda")
 }
 
-// 16. Inventaris & Peminjaman
+/// Inventaris RT.
+/// TENANCY FIX: `kodeBarang` was globally unique across all RTs.
 model InventarisRt {
   id                String                 @id @default(uuid())
+  rtId              String
+  rt                RukunTetanggaConfig    @relation(fields: [rtId], references: [id], onDelete: Cascade)
   namaBarang        String
-  kodeBarang        String                 @unique
+  kodeBarang        String
   kategori          String                 @default("Umum")
   jumlahTotal       Int
   kondisiBaik       Int
   lokasiPenyimpanan String                 @default("Pos RT")
+
   peminjaman        PeminjamanInventaris[]
+
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
 
+  @@unique([rtId, kodeBarang])
+  @@index([rtId])
   @@map("inventaris_rt")
 }
 
+/// Peminjaman Inventaris — equipment loans.
 model PeminjamanInventaris {
   id                    String       @id @default(uuid())
+  rtId                  String
+  rt                    RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   inventarisId          String
   inventaris            InventarisRt @relation(fields: [inventarisId], references: [id], onDelete: Cascade)
   peminjamWargaId       String
@@ -360,18 +692,22 @@ model PeminjamanInventaris {
   status                String       @default("PENDING") // PENDING, APPROVED, REJECTED, RETURNED
   keperluan             String
   approvedByUserId      String?
+
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
+  @@index([rtId])
   @@index([inventarisId])
   @@index([peminjamWargaId])
-  @@index([status])
+  @@index([rtId, status])
   @@map("peminjaman_inventaris")
 }
 
-// 17. Tiket Aduan Warga
+/// Tiket Aduan Warga — resident complaint tickets.
 model TiketAduan {
   id                String   @id @default(uuid())
+  rtId              String
+  rt                RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   pelaporWargaId    String
   pelaporWarga      Warga    @relation(fields: [pelaporWargaId], references: [id], onDelete: Cascade)
   kategori          String
@@ -380,17 +716,21 @@ model TiketAduan {
   fotoMinioKey      String?
   status            String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, REJECTED
   tanggapanPengurus String?
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  @@index([rtId])
   @@index([pelaporWargaId])
-  @@index([status])
+  @@index([rtId, status])
   @@map("tiket_aduan_warga")
 }
 
-// 18. In-App Notifications & Security Audit Logs (Hash-Chained)
+/// In-App Notification Center (SSE + Capacitor local notifications).
 model InAppNotification {
   id          String    @id @default(uuid())
+  rtId        String
+  rt          RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   kategori    String    // SURAT, IURAN, RONDA, KEAMANAN, PENGUMUMAN
@@ -401,15 +741,24 @@ model InAppNotification {
   deepLinkUrl String?
   isRead      Boolean   @default(false)
   readAt      DateTime?
+
   createdAt   DateTime  @default(now())
 
+  @@index([rtId])
   @@index([userId])
-  @@index([isRead])
+  @@index([rtId, isRead])
   @@map("in_app_notifications")
 }
 
+/// Security Audit Logs — hash-chained per tenant (anti-tamper).
+/// TENANCY FIX: `sequence` gives a total order inside the tenant's chain so the
+/// audit trail can be verified deterministically, independent of other tenants.
 model SecurityAuditLog {
   id           String   @id @default(uuid())
+  rtId         String
+  rt           RukunTetanggaConfig @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  /// Monotonic position within this tenant's audit chain (1-based).
+  sequence     Int      @default(0)
   actorUserId  String
   actorRole    String
   actionType   String   // LOGIN, REVEAL_PII, STREAM_KTP, SIGN_SURAT, VERIFY_IURAN, MUTASI
@@ -420,12 +769,14 @@ model SecurityAuditLog {
   userAgent    String
   prevHash     String
   rowHash      String
+
   createdAt    DateTime @default(now())
 
+  @@unique([rtId, sequence])
+  @@index([rtId])
+  @@index([rtId, createdAt])
   @@index([actorUserId])
   @@index([actionType])
   @@index([rowHash])
-  @@index([createdAt])
   @@map("security_audit_logs")
 }
-

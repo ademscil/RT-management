@@ -35,6 +35,23 @@ export function createServer(): FastifyInstance {
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
 
+  // 1.1 Anti-Node2Shell / Brotli Decompression RCE Mitigation (CVE-2026-111497)
+  // Rejects incoming request bodies with Content-Encoding: br to prevent triggering
+  // out-of-bounds write buffer overflow in native Brotli decoder.
+  app.addHook('onRequest', async (req, reply) => {
+    const encoding = req.headers['content-encoding'];
+    if (encoding && typeof encoding === 'string' && (encoding.toLowerCase().includes('br') || encoding.toLowerCase().includes('brotli'))) {
+      return reply.status(415).send({
+        success: false,
+        error: {
+          code: ErrorCode.ERR_VALIDATION,
+          message: 'Brotli request body compression is blocked due to security advisory CVE-2026-111497 (Node2Shell). Please send uncompressed or gzip encoded payloads.',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   // 2. CORS configuration (allowing web portal & admin panel cross-origin)
   app.register(cors, {
     origin: true,

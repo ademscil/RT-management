@@ -2,25 +2,35 @@ import type { FastifyPluginAsync } from 'fastify';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import { EnvelopeCryptoAdapter } from '../../infrastructure/crypto/envelope-crypto.adapter.js';
 import { HmacBlindIndexAdapter } from '../../infrastructure/crypto/blind-index.adapter.js';
-import { HashChainService } from '../../infrastructure/ledger/hash-chain.service.js';
 import {
   WargaQueryFilterSchema,
   RevealPiiRequestSchema,
   WargaCreateSchema,
   buildPaginationMeta,
   ErrorCode,
+  TenantQuotaResource,
   UserRole,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getRtId,
+  getTenantContext,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
+import { AuditLogService } from '../../infrastructure/ledger/audit-log.service.js';
+import { PlanQuotaService } from '../../infrastructure/tenant/plan-quota.service.js';
+import { TenantAccessError } from '../../infrastructure/tenant/tenant-context.service.js';
 import { PiiCircuitBreaker } from '../middlewares/circuit-breaker.middleware.js';
 
 export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
   const cryptoAdapter = new EnvelopeCryptoAdapter();
   const blindIndexAdapter = new HmacBlindIndexAdapter();
-  const hashChainService = new HashChainService();
 
   fastify.addHook('preHandler', authenticateJwt);
+  // Every route in this module is tenant-scoped. Attaching the resolver here
+  // means a handler physically cannot query without an rtId available.
+  fastify.addHook('preHandler', resolveTenantContext);
 
   /**
    * GET /api/v1/kependudukan/warga (Server-side Pagination, Debounced Search & Vulnerability Filters)
@@ -32,7 +42,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         success: false,
         error: {
           code: ErrorCode.ERR_VALIDATION,
-          message: parseResult.error.errors[0].message,
+          message: parseResult.error.issues[0].message,
         },
         timestamp: new Date().toISOString(),
       });
@@ -43,8 +53,9 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
 
     const session = request.userSession!;
 
-    // Query builder with RLS session awareness
-    const where: Record<string, unknown> = {};
+    // TENANT SCOPE: the rtId predicate is not optional. Without it this list
+    // returned every resident of every RT in the system.
+    const where: Record<string, unknown> = { rtId: getRtId(request) };
 
     // If resident, restrict to own KK
     if (session.role === UserRole.WARGA) {
@@ -307,12 +318,15 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     const { reason = 'Keperluan Administrasi Keluarga' } = (request.body as { reason?: string }) || {};
     const session = request.userSession!;
 
+    const tenant = getTenantContext(request);
     const targetWarga = await prisma.warga.findUnique({
       where: { id: wargaId },
       include: { kk: true },
     });
 
-    if (!targetWarga) {
+    // Anti-IDOR: a warga row belonging to another tenant is reported as NOT
+    // FOUND, so this endpoint cannot be used to probe which warga ids exist.
+    if (!targetWarga || targetWarga.rtId !== tenant.rtId) {
       return reply.status(404).send({
         success: false,
         error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
@@ -330,35 +344,20 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
 
     const decryptedNik = cryptoAdapter.decryptField(targetWarga.nikEncrypted);
 
-    // Record in Security Audit Log
-    const lastLog = await prisma.securityAuditLog.findFirst({ orderBy: { createdAt: 'desc' } });
-    const prevHash = lastLog ? lastLog.rowHash : HashChainService.GENESIS_HASH;
-    const auditId = `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const timestampIso = new Date().toISOString();
-    const actionType = 'REVEAL_PII_NIK';
-
-    const rowHash = hashChainService.computeRowHash(
-      prevHash,
-      auditId,
-      session.userId,
-      `${actionType}:${wargaId}:${reason}`,
-      timestampIso
-    );
-
-    await prisma.securityAuditLog.create({
-      data: {
-        id: auditId,
-        actorUserId: session.userId,
-        actorRole: session.role,
-        actionType,
-        targetEntity: 'WARGA',
-        targetId: wargaId,
-        accessReason: reason,
-        ipAddress: request.ip || '127.0.0.1',
-        userAgent: request.headers['user-agent'] || 'Unknown',
-        prevHash,
-        rowHash,
-      },
+    // Tamper-evident, PER-TENANT audit chain. Delegating to AuditLogService
+    // guarantees the chain link is computed against the same tenant's previous
+    // row inside a serializable transaction (the old inline version read the
+    // globally-latest row, which both leaked across tenants and could fork).
+    await AuditLogService.append(prisma, {
+      rtId: tenant.rtId,
+      actorUserId: session.userId,
+      actorRole: session.role,
+      actionType: 'REVEAL_PII_NIK',
+      targetEntity: 'WARGA',
+      targetId: wargaId,
+      accessReason: reason,
+      ipAddress: request.ip || '127.0.0.1',
+      userAgent: (request.headers['user-agent'] as string) || 'Unknown',
     });
 
     return reply.send({
@@ -406,8 +405,9 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (wargaId) {
+      const tenant = getTenantContext(request);
       const targetWarga = await prisma.warga.findUnique({ where: { id: wargaId } });
-      if (!targetWarga) {
+      if (!targetWarga || targetWarga.rtId !== tenant.rtId) {
         return reply.status(404).send({
           success: false,
           error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
@@ -428,11 +428,20 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      await prisma.warga.update({
-        where: { id: wargaId },
-        data: {
-          fotoKtpMinioKey: `ktp-${wargaId}-${Date.now()}.jpg`,
-        },
+      // FIX (latent C-07): the previous code wrote `fotoKtpMinioKey` onto Warga.
+      // That column does not exist in the schema, so with the (previously `any`)
+      // Prisma client this always threw "Unknown argument" at runtime. Document
+      // bytes live in DokumenVault; the upload is recorded to the audit trail.
+      await AuditLogService.appendBestEffort(prisma, {
+        rtId: tenant.rtId,
+        actorUserId: session?.userId || 'system',
+        actorRole: session?.role || 'WARGA',
+        actionType: 'UPLOAD_DOKUMEN',
+        targetEntity: 'WARGA',
+        targetId: wargaId,
+        accessReason: `Unggah dokumen ${documentType}`,
+        ipAddress: request.ip || '127.0.0.1',
+        userAgent: (request.headers['user-agent'] as string) || 'Unknown',
       });
     }
 
@@ -522,7 +531,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
           success: false,
           error: {
             code: ErrorCode.ERR_VALIDATION,
-            message: parseResult.error.errors[0].message,
+            message: parseResult.error.issues[0].message,
           },
           timestamp: new Date().toISOString(),
         });
@@ -560,39 +569,18 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Record in Hash-Chained Security Audit Log
-      const lastLog = await prisma.securityAuditLog.findFirst({
-        orderBy: { createdAt: 'desc' },
-      });
-
-      const prevHash = lastLog ? lastLog.rowHash : HashChainService.GENESIS_HASH;
-      const auditId = `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const timestampIso = new Date().toISOString();
-      const actionType = `REVEAL_PII_${field}`;
-
-      const rowHash = hashChainService.computeRowHash(
-        prevHash,
-        auditId,
-        user.userId,
-        `${actionType}:${wargaId}:${reason}`,
-        timestampIso
-      );
-
-      await prisma.securityAuditLog.create({
-        data: {
-          id: auditId,
-          actorUserId: user.userId,
-          actorRole: user.role,
-          actionType,
-          targetEntity: 'WARGA',
-          targetId: wargaId,
-          accessReason: reason,
-          ipAddress: request.ip || '127.0.0.1',
-          userAgent: request.headers['user-agent'] || 'Unknown',
-          prevHash,
-          rowHash,
-          createdAt: new Date(timestampIso),
-        },
+      // Tamper-evident, PER-TENANT audit chain (was: globally-latest prevHash,
+      // which leaked across tenants and could fork under concurrency).
+      const auditRecord = await AuditLogService.append(prisma, {
+        rtId: getRtId(request),
+        actorUserId: user.userId,
+        actorRole: user.role,
+        actionType: `REVEAL_PII_${field}`,
+        targetEntity: 'WARGA',
+        targetId: wargaId,
+        accessReason: reason,
+        ipAddress: request.ip || '127.0.0.1',
+        userAgent: (request.headers['user-agent'] as string) || 'Unknown',
       });
 
       return reply.send({
@@ -600,7 +588,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           field,
           value: revealedValue,
-          auditId,
+          auditId: auditRecord.id,
           accessReason: reason,
         },
         timestamp: new Date().toISOString(),
@@ -627,15 +615,28 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Handle house-prefix or direct rumahId to auto-resolve or auto-create KK
+      const tenant = getTenantContext(request);
+
       if ((targetKkId && targetKkId.startsWith('house-')) || (!targetKkId && rawBody?.rumahId)) {
         const targetRumahId = rawBody?.rumahId || targetKkId.replace('house-', '');
-        let existingKk = await prisma.kartuKeluarga.findFirst({ where: { rumahId: targetRumahId } });
+        let existingKk = await prisma.kartuKeluarga.findFirst({
+          where: { rumahId: targetRumahId, rtId: tenant.rtId },
+        });
         if (!existingKk) {
           const house = await prisma.rumahKavling.findUnique({ where: { id: targetRumahId } });
+          // Anti-IDOR: refuse to attach a KK to a house owned by another tenant.
+          if (!house || house.rtId !== tenant.rtId) {
+            return reply.status(404).send({
+              success: false,
+              error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Rumah/kavling tidak ditemukan.' },
+              timestamp: new Date().toISOString(),
+            });
+          }
           const provisionalNoKk = `327601${String(Date.now()).slice(-10)}`;
           const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(provisionalNoKk);
           existingKk = await prisma.kartuKeluarga.create({
             data: {
+              rtId: tenant.rtId,
               rumahId: targetRumahId,
               noKkEncrypted: cryptoAdapter.encryptField(provisionalNoKk),
               noKkBlindIndex,
@@ -651,7 +652,11 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       const input = WargaCreateSchema.parse(rawBody);
       const blindIndex = blindIndexAdapter.computeBlindIndex(input.nik);
 
-      const existing = await prisma.warga.findUnique({ where: { nikBlindIndex: blindIndex } });
+      // NIK uniqueness is PER TENANT — the same citizen may hold a residency
+      // record in more than one RT (e.g. KTP address vs. domicile).
+      const existing = await prisma.warga.findUnique({
+        where: { rtId_nikBlindIndex: { rtId: tenant.rtId, nikBlindIndex: blindIndex } },
+      });
       if (existing) {
         return reply.status(409).send({
           success: false,
@@ -660,8 +665,23 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      // Progressive quota: enrolling residents consumes the plan's KK/Warga quota.
+      try {
+        await PlanQuotaService.assertAvailable(prisma, tenant, TenantQuotaResource.WARGA, 1);
+      } catch (err) {
+        if (err instanceof TenantAccessError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        throw err;
+      }
+
       const created = await prisma.warga.create({
         data: {
+          rtId: tenant.rtId,
           kkId: targetKkId,
           namaLengkap: input.namaLengkap,
           nikEncrypted: cryptoAdapter.encryptField(input.nik),
@@ -785,8 +805,13 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Check if kodeBlok already exists
-      const existing = await prisma.rumahKavling.findUnique({ where: { kodeBlok } });
+      // Check if kodeBlok already exists WITHIN THIS TENANT.
+      // Previously this was a global check, so RT Depok could not create a block
+      // named "A1" simply because RT Pangkalpinang already had one.
+      const tenant = getTenantContext(request);
+      const existing = await prisma.rumahKavling.findUnique({
+        where: { rtId_kodeBlok: { rtId: tenant.rtId, kodeBlok } },
+      });
       if (existing) {
         return reply.status(409).send({
           success: false,
@@ -797,6 +822,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
 
       const house = await prisma.rumahKavling.create({
         data: {
+          rtId: tenant.rtId,
           kodeBlok,
           nomorRumah,
           alamat,
@@ -815,6 +841,7 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
 
       const createdKk = await prisma.kartuKeluarga.create({
         data: {
+          rtId: getRtId(request),
           rumahId: house.id,
           noKkEncrypted,
           noKkBlindIndex,
@@ -944,8 +971,12 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const cleanKk = nomorKk.trim();
+      const tenant = getTenantContext(request);
       const noKkBlindIndex = blindIndexAdapter.computeBlindIndex(cleanKk);
-      const existingKk = await prisma.kartuKeluarga.findUnique({ where: { noKkBlindIndex } });
+      // Kartu Keluarga numbers are unique PER TENANT.
+      const existingKk = await prisma.kartuKeluarga.findUnique({
+        where: { rtId_noKkBlindIndex: { rtId: tenant.rtId, noKkBlindIndex } },
+      });
       if (existingKk) {
         return reply.status(409).send({
           success: false,
@@ -954,8 +985,28 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      // Enrolling a new family unit consumes the plan's KK quota.
+      try {
+        await PlanQuotaService.assertAvailable(
+          prisma,
+          tenant,
+          TenantQuotaResource.KARTU_KELUARGA,
+          1
+        );
+      } catch (err) {
+        if (err instanceof TenantAccessError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        throw err;
+      }
+
       const created = await prisma.kartuKeluarga.create({
         data: {
+          rtId: tenant.rtId,
           rumahId,
           noKkEncrypted: cryptoAdapter.encryptField(cleanKk),
           noKkBlindIndex,
@@ -973,3 +1024,4 @@ export const kependudukanRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 };
+

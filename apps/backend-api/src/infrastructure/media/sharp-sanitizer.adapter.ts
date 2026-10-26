@@ -55,8 +55,11 @@ export class SharpSanitizerAdapter {
     SharpSanitizerAdapter.activeProcesses++;
 
     try {
-      // 1. Load image and get metadata
-      const image = sharp(inputBuffer, { failOnError: true });
+      // 1. Load image and get metadata.
+      // `failOn: 'error'` is the current sharp API for "abort on a corrupt or
+      // truncated stream". The old `failOnError: true` alias was removed in the
+      // sharp version pinned by the security override, so this must stay current.
+      const image = sharp(inputBuffer, { failOn: 'error' });
       const metadata = await image.metadata();
       const width = metadata.width || 1200;
       const height = metadata.height || 800;

@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
-import { HashChainService } from '../../infrastructure/ledger/hash-chain.service.js';
 import type { SSEBrokerService } from '../../infrastructure/realtime/sse-broker.service.js';
 import {
   GenerateTagihanBulananSchema,
@@ -12,18 +11,22 @@ import {
   ErrorCode,
   UserRole,
   StatusTagihanIuran,
-  TipeTransaksiKas,
   NotificationCategory,
   NotificationPriority,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getRtId,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
+import { LedgerService } from '../../infrastructure/ledger/ledger.service.js';
 
 export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
-  const hashChainService = new HashChainService();
   const sseBroker = (fastify as any).sseBroker as SSEBrokerService;
 
   fastify.addHook('preHandler', authenticateJwt);
+  fastify.addHook('preHandler', resolveTenantContext);
 
   /**
    * GET /api/v1/keuangan/matriks (12-Month Billing Matrix per House)
@@ -36,6 +39,7 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       const selectedYear = Number(tahun);
 
       const houses = await prisma.rumahKavling.findMany({
+        where: { rtId: getRtId(request) },
         orderBy: { kodeBlok: 'asc' },
         include: {
           kartuKeluarga: {
@@ -90,7 +94,7 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
@@ -275,15 +279,17 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
 
       const { bulan, tahun, nominalDefault } = parseResult.data;
+      const rtId = getRtId(request);
 
       const houses = await prisma.rumahKavling.findMany({
         where: {
+          rtId,
           statusHunian: { in: ['DIHUNI_PEMILIK', 'DIHUNI_PENYEWA'] },
         },
         include: { kartuKeluarga: true },
@@ -301,6 +307,7 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
         if (!existing) {
           await prisma.tagihanIuran.create({
             data: {
+              rtId,
               rumahId: h.id,
               kkId: kk.id,
               bulan,
@@ -348,7 +355,7 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
@@ -389,9 +396,14 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Approved: 1. Update tagihan 2. Insert into Kas Ledger with Hash-Chaining
+      // Approved: post the immutable ledger entry and flip the bill to PAID in
+      // ONE serializable transaction. The ledger chain link is computed for THIS
+      // tenant inside that transaction, so concurrent verifications cannot fork
+      // the chain or corrupt the running balance.
+      const rtId = getRtId(request);
+
       const posOperasional = await prisma.posKeuangan.findFirst({
-        where: { kodePosKas: 'POS-OPS' },
+        where: { kodePosKas: 'POS-OPS', rtId },
       });
 
       if (!posOperasional) {
@@ -402,54 +414,27 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const lastKas = await prisma.kasLedgerImmutable.findFirst({
-        orderBy: { createdAt: 'desc' },
+      const ledgerEntry = await LedgerService.postEntry(prisma, {
+        rtId,
+        posKeuanganId: posOperasional.id,
+        tipe: 'IN',
+        nominal: tagihan.nominal,
+        deskripsi: `Penerimaan Iuran Warga Blok ${tagihan.rumah.kodeBlok}/${tagihan.rumah.nomorRumah} Periode ${tagihan.bulan}/${tagihan.tahun}`,
+        createdByUserId: user.userId,
+        approvedByUserId: user.userId,
+        extraWork: async (tx) => {
+          await tx.tagihanIuran.update({
+            where: { id: tagihanId },
+            data: {
+              status: StatusTagihanIuran.PAID,
+              paidAt: new Date(),
+              verifiedByUserId: user.userId,
+            },
+          });
+        },
       });
 
-      const prevHash = lastKas ? lastKas.rowHash : HashChainService.GENESIS_HASH;
-      const timestampIso = new Date().toISOString();
-      const kasId = `KAS-IN-${Date.now()}`;
-      const actionOrNominal = `IN:${tagihan.nominal.toString()}`;
-
-      const rowHash = hashChainService.computeRowHash(
-        prevHash,
-        kasId,
-        user.userId,
-        actionOrNominal,
-        timestampIso
-      );
-
-      const saldoBaru = posOperasional.saldoBerjalan + tagihan.nominal;
-
-      await prisma.$transaction([
-        prisma.tagihanIuran.update({
-          where: { id: tagihanId },
-          data: {
-            status: StatusTagihanIuran.PAID,
-            paidAt: new Date(),
-            verifiedByUserId: user.userId,
-          },
-        }),
-        prisma.posKeuangan.update({
-          where: { id: posOperasional.id },
-          data: { saldoBerjalan: saldoBaru },
-        }),
-        prisma.kasLedgerImmutable.create({
-          data: {
-            id: kasId,
-            posKeuanganId: posOperasional.id,
-            tipe: TipeTransaksiKas.IN,
-            nominal: tagihan.nominal,
-            saldoSetelah: saldoBaru,
-            deskripsi: `Penerimaan Iuran Warga Blok ${tagihan.rumah.kodeBlok}/${tagihan.rumah.nomorRumah} Periode ${tagihan.bulan}/${tagihan.tahun}`,
-            createdByUserId: user.userId,
-            approvedByUserId: user.userId,
-            prevHash,
-            rowHash,
-            createdAt: new Date(timestampIso),
-          },
-        }),
-      ]);
+      const rowHash = ledgerEntry.rowHash;
 
       // Notify resident
       const residentUser = tagihan.kk.warga.find((w) => w.users)?.users;
@@ -485,14 +470,16 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
 
     const { page, limit, posKeuanganId, tipe } = parseResult.data;
 
-    const where: Record<string, unknown> = {};
+    // TENANT SCOPE — the immutable ledger is per RT. Without this filter every
+    // community could read every other community's cash movements.
+    const where: Record<string, unknown> = { rtId: getRtId(request) };
     if (posKeuanganId) where.posKeuanganId = posKeuanganId;
     if (tipe) where.tipe = tipe;
 
@@ -549,7 +536,7 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
@@ -557,8 +544,11 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       const { posKeuanganId, nominal, deskripsi } = parseResult.data;
       const user = request.userSession!;
 
+      const rtId = getRtId(request);
+
       const pos = await prisma.posKeuangan.findUnique({ where: { id: posKeuanganId } });
-      if (!pos) {
+      // Anti-IDOR: another tenant's cash account is reported as not found.
+      if (!pos || pos.rtId !== rtId) {
         return reply.status(404).send({
           success: false,
           error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Pos keuangan tidak ditemukan.' },
@@ -567,55 +557,41 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const nominalBig = BigInt(nominal);
-      if (pos.saldoBerjalan < nominalBig) {
-        return reply.status(400).send({
-          success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: 'Saldo pos keuangan tidak mencukupi untuk pengeluaran ini.' },
-          timestamp: new Date().toISOString(),
+
+      // LedgerService re-reads the balance inside a serializable transaction, so
+      // the insufficiency check below is authoritative even under concurrency.
+      let ledgerEntry;
+      try {
+        ledgerEntry = await LedgerService.postEntry(prisma, {
+          rtId,
+          posKeuanganId,
+          tipe: 'OUT',
+          nominal: nominalBig,
+          deskripsi,
+          createdByUserId: user.userId,
+          approvedByUserId: user.userId,
         });
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('INSUFFICIENT_FUNDS')) {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: ErrorCode.ERR_VALIDATION,
+              message: 'Saldo pos keuangan tidak mencukupi untuk pengeluaran ini.',
+            },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        throw err;
       }
-
-      const lastKas = await prisma.kasLedgerImmutable.findFirst({ orderBy: { createdAt: 'desc' } });
-      const prevHash = lastKas ? lastKas.rowHash : HashChainService.GENESIS_HASH;
-      const timestampIso = new Date().toISOString();
-      const kasId = `KAS-OUT-${Date.now()}`;
-      const actionOrNominal = `OUT:${nominalBig.toString()}`;
-
-      const rowHash = hashChainService.computeRowHash(
-        prevHash,
-        kasId,
-        user.userId,
-        actionOrNominal,
-        timestampIso
-      );
-
-      const saldoBaru = pos.saldoBerjalan - nominalBig;
-
-      await prisma.$transaction([
-        prisma.posKeuangan.update({
-          where: { id: posKeuanganId },
-          data: { saldoBerjalan: saldoBaru },
-        }),
-        prisma.kasLedgerImmutable.create({
-          data: {
-            id: kasId,
-            posKeuanganId,
-            tipe: TipeTransaksiKas.OUT,
-            nominal: nominalBig,
-            saldoSetelah: saldoBaru,
-            deskripsi,
-            createdByUserId: user.userId,
-            approvedByUserId: user.userId,
-            prevHash,
-            rowHash,
-            createdAt: new Date(timestampIso),
-          },
-        }),
-      ]);
 
       return reply.send({
         success: true,
-        data: { id: kasId, rowHash, saldoBaru: Number(saldoBaru) },
+        data: {
+          id: ledgerEntry.id,
+          rowHash: ledgerEntry.rowHash,
+          saldoBaru: Number(ledgerEntry.saldoSetelah),
+        },
         timestamp: new Date().toISOString(),
       });
     }
@@ -627,21 +603,15 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/verify-integrity',
     { preHandler: [requireRoles([UserRole.KETUA_RT, UserRole.BENDAHARA, UserRole.SEKRETARIS])] },
-    async (_request, reply) => {
-      const records = await prisma.kasLedgerImmutable.findMany({
-        orderBy: { createdAt: 'asc' },
-      });
-
-      const mappedRecords = records.map((r) => ({
-        id: r.id,
-        actorId: r.createdByUserId,
-        actionOrNominal: `${r.tipe}:${r.nominal.toString()}`,
-        timestampIso: r.createdAt.toISOString(),
-        prevHash: r.prevHash,
-        rowHash: r.rowHash,
-      }));
-
-      const verificationResult = hashChainService.verifyChain(mappedRecords);
+    async (request, reply) => {
+      // Verify THIS tenant's chain only. Verifying a global chain across mixed
+      // tenants is meaningless: chains are independent per RT, so the previous
+      // implementation reported a false "tampered" verdict the moment a second
+      // RT posted an entry.
+      const verificationResult = await LedgerService.verifyTenantChain(
+        prisma,
+        getRtId(request)
+      );
 
       return reply.send({
         success: true,
@@ -651,3 +621,4 @@ export const keuanganRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 };
+

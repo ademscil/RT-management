@@ -104,7 +104,7 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
@@ -112,7 +112,7 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
       const { page, limit, category, isRead } = parseResult.data;
       const session = request.userSession!;
 
-      const where: Record<string, unknown> = { userId: session.userId };
+      const where: Record<string, unknown> = { userId: session.userId, rtId: session.rtId };
       if (category) where.kategori = category;
       if (isRead !== undefined) where.isRead = isRead;
 
@@ -159,6 +159,7 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
       const count = await prisma.inAppNotification.count({
         where: {
           userId: session.userId,
+          rtId: session.rtId,
           isRead: false,
         },
       });
@@ -176,7 +177,10 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
     authenticatedFastify.post('/mark-all-read', async (request, reply) => {
       const session = request.userSession!;
       await prisma.inAppNotification.updateMany({
-        where: { userId: session.userId, isRead: false },
+        // `rtId` is redundant with `userId` today, but it is deliberately kept:
+        // it means a notification can never be marked read across a tenant
+        // boundary even if user ids were ever reused or migrated.
+        where: { userId: session.userId, rtId: session.rtId, isRead: false },
         data: { isRead: true, readAt: new Date() },
       });
 
@@ -193,14 +197,25 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (all) {
         await prisma.inAppNotification.updateMany({
-          where: { userId: session.userId, isRead: false },
+          where: { userId: session.userId, rtId: session.rtId, isRead: false },
           data: { isRead: true, readAt: new Date() },
         });
       } else if (notificationId) {
-        await prisma.inAppNotification.update({
-          where: { id: notificationId },
+        // IDOR FIX: the previous `update({ where: { id } })` let ANY authenticated
+        // user mark ANY other user's notification as read (and probe which ids
+        // exist) by guessing a UUID. `updateMany` with the full ownership
+        // predicate is the correct primitive here — `update` cannot express it.
+        const result = await prisma.inAppNotification.updateMany({
+          where: { id: notificationId, userId: session.userId, rtId: session.rtId },
           data: { isRead: true, readAt: new Date() },
         });
+        if (result.count === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Notifikasi tidak ditemukan.' },
+            timestamp: new Date().toISOString(),
+          });
+        }
       }
 
       return reply.send({
@@ -211,3 +226,4 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 };
+

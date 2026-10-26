@@ -1,9 +1,18 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
-import { UserRole, ErrorCode } from '@simrt/shared-types';
+import {
+  UserRole,
+  ErrorCode,
+  PlanCode,
+  TenantStatus,
+  TenantSlugSchema,
+  ensureUniqueSlug,
+  slugifyTenantIdentity,
+} from '@simrt/shared-types';
 import { Ed25519SignerAdapter } from '../../infrastructure/crypto/ed25519-signer.adapter.js';
 import { EnvelopeCryptoAdapter } from '../../infrastructure/crypto/envelope-crypto.adapter.js';
+import { TenantContextService } from '../../infrastructure/tenant/tenant-context.service.js';
 import crypto from 'node:crypto';
 
 export const configRoutes: FastifyPluginAsync = async (fastify) => {
@@ -31,18 +40,21 @@ export const configRoutes: FastifyPluginAsync = async (fastify) => {
    * Helper: Ensure default RTs exist (Taman Bunga Pangkalpinang & Sukamaju Depok)
    */
   async function ensureDefaultRts() {
-    let count = await prisma.rukunTetanggaConfig.count();
+    const count = await prisma.rukunTetanggaConfig.count();
     if (count === 0) {
       // 1. Pangkalpinang
       const { publicKeyPem: pk1, privateKeyPem: sk1 } = signerAdapter.generateKeyPair();
       await prisma.rukunTetanggaConfig.create({
         data: {
+          slug: slugifyTenantIdentity('010', '003', 'Taman Bunga', 'Kota Pangkalpinang'),
           kodeRt: '010',
           kodeRw: '003',
           namaKelurahan: 'Taman Bunga',
           namaKecamatan: 'Gerunggang',
           namaKota: 'Kota Pangkalpinang',
           kodePos: '33119',
+          status: TenantStatus.ACTIVE,
+          planCode: PlanCode.FREE,
           ed25519PublicKey: pk1,
           ed25519PrivateKeyEnc: cryptoAdapter.encryptField(sk1),
         },
@@ -52,12 +64,15 @@ export const configRoutes: FastifyPluginAsync = async (fastify) => {
       const { publicKeyPem: pk2, privateKeyPem: sk2 } = signerAdapter.generateKeyPair();
       await prisma.rukunTetanggaConfig.create({
         data: {
+          slug: slugifyTenantIdentity('05', '02', 'Sukamaju', 'Kota Depok'),
           kodeRt: '05',
           kodeRw: '02',
           namaKelurahan: 'Sukamaju',
           namaKecamatan: 'Cilodong',
           namaKota: 'Kota Depok',
           kodePos: '16415',
+          status: TenantStatus.ACTIVE,
+          planCode: PlanCode.FREE,
           ed25519PublicKey: pk2,
           ed25519PrivateKeyEnc: cryptoAdapter.encryptField(sk2),
         },
@@ -158,25 +173,93 @@ export const configRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      const requestedSlug = (request.body as any)?.slug;
+
+      // Identity must be unique: the SAME (RT, RW, kelurahan, kota) tuple denotes
+      // one community. Without this check the registry accumulates duplicates —
+      // which is exactly why the old read path needed a runtime dedupe filter.
+      const duplicate = await prisma.rukunTetanggaConfig.findFirst({
+        where: {
+          kodeRt: String(kodeRt).trim(),
+          kodeRw: String(kodeRw).trim(),
+          namaKelurahan: String(namaKelurahan).trim(),
+          namaKota: String(namaKota).trim(),
+        },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return reply.status(409).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_CONFLICT,
+            message: `Komunitas RT ${kodeRt}/RW ${kodeRw} Kel. ${namaKelurahan} ${namaKota} sudah terdaftar.`,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Slug: honour an explicit client value when it is valid and free,
+      // otherwise derive one deterministically from the civic identity.
+      const existingSlugs = (
+        await prisma.rukunTetanggaConfig.findMany({ select: { slug: true } })
+      ).map((r) => r.slug);
+
+      let slug: string;
+      if (requestedSlug && typeof requestedSlug === 'string') {
+        const parsed = TenantSlugSchema.safeParse(requestedSlug);
+        if (!parsed.success) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: ErrorCode.ERR_VALIDATION, message: parsed.error.issues[0].message },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        if (existingSlugs.includes(parsed.data)) {
+          return reply.status(409).send({
+            success: false,
+            error: { code: ErrorCode.ERR_TENANT_SLUG_TAKEN, message: 'Slug tersebut sudah digunakan.' },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        slug = parsed.data;
+      } else {
+        slug = ensureUniqueSlug(
+          slugifyTenantIdentity(
+            String(kodeRt).trim(),
+            String(kodeRw).trim(),
+            String(namaKelurahan).trim(),
+            String(namaKota).trim()
+          ),
+          existingSlugs
+        );
+      }
+
       const { publicKeyPem, privateKeyPem } = signerAdapter.generateKeyPair();
       const encryptedPrivateKey = cryptoAdapter.encryptField(privateKeyPem);
 
       const created = await prisma.rukunTetanggaConfig.create({
         data: {
+          slug,
           kodeRt: String(kodeRt).trim(),
           kodeRw: String(kodeRw).trim(),
           namaKelurahan: String(namaKelurahan).trim(),
           namaKecamatan: String(namaKecamatan).trim(),
           namaKota: String(namaKota).trim(),
           kodePos: kodePos ? String(kodePos).trim() : '00000',
+          status: TenantStatus.ACTIVE,
+          planCode: PlanCode.FREE,
           ed25519PublicKey: publicKeyPem,
           ed25519PrivateKeyEnc: encryptedPrivateKey,
         },
       });
 
+      // The resolver caches tenant rows briefly; drop the entry so the new
+      // community is usable immediately instead of after the TTL.
+      TenantContextService.invalidate();
+
       return reply.status(201).send({
         success: true,
-        data: formatRt(created),
+        data: { ...formatRt(created), slug: created.slug },
         timestamp: new Date().toISOString(),
       });
     }
@@ -324,3 +407,4 @@ export const configRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 };
+

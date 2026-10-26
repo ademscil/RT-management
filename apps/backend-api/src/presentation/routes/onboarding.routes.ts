@@ -9,21 +9,30 @@ import {
   ErrorCode,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getTenantContext,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
 
 export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
   const pdfService = new PdfGeneratorService();
 
   fastify.addHook('preHandler', authenticateJwt);
+  fastify.addHook('preHandler', resolveTenantContext);
   fastify.addHook('preHandler', requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS]));
 
   /**
    * POST /api/v1/onboarding/generate-cards (Generates A4 PDF sheet of 8 QR Activation Cards)
    */
-  fastify.post('/generate-cards', async (_request, reply) => {
-    // Find unverified or unclaimed KKs
+  fastify.post('/generate-cards', async (request, reply) => {
+    const tenant = getTenantContext(request);
+
+    // Find unverified or unclaimed KKs — TENANT SCOPED. Without the rtId filter
+    // this generated activation QR cards for every RT in the system.
     const kks = await prisma.kartuKeluarga.findMany({
       where: {
+        rtId: tenant.rtId,
         onboardingInvites: {
           none: { isClaimed: true },
         },
@@ -39,9 +48,10 @@ export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
       const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
       const tokenMasked = `${rawToken.substring(0, 12)}****${rawToken.substring(rawToken.length - 4)}`;
 
-      // Save invite token
+      // Save invite token — bound to the tenant that issued it.
       await prisma.onboardingInvite.create({
         data: {
+          rtId: tenant.rtId,
           kkId: kk.id,
           rumahId: kk.rumahId,
           tokenHash,
@@ -81,6 +91,7 @@ export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/card/:kkId', async (request, reply) => {
     const { kkId } = request.params as { kkId: string };
+    const tenant = getTenantContext(request);
 
     const kk = await prisma.kartuKeluarga.findUnique({
       where: { id: kkId },
@@ -95,7 +106,9 @@ export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!kk) {
+    // Anti-IDOR: another tenant's Kartu Keluarga must not be printable here —
+    // the QR card grants ACCOUNT ACTIVATION, so a leak is an account takeover.
+    if (!kk || kk.rtId !== tenant.rtId) {
       return reply.status(404).send({
         success: false,
         error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Kartu Keluarga tidak ditemukan.' },
@@ -116,6 +129,7 @@ export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
 
     await prisma.onboardingInvite.create({
       data: {
+        rtId: tenant.rtId,
         kkId: kk.id,
         rumahId: kk.rumahId,
         tokenHash,
@@ -130,7 +144,10 @@ export const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
       kk.warga[0]?.namaLengkap ||
       'Kepala Keluarga';
 
-    const rtConfig = await prisma.rukunTetanggaConfig.findFirst();
+    // Use the tenant's own letterhead, not whichever RT happens to be first.
+    const rtConfig = await prisma.rukunTetanggaConfig.findUnique({
+      where: { id: tenant.rtId },
+    });
     const rtName = rtConfig ? `RT ${rtConfig.kodeRt} / RW ${rtConfig.kodeRw} - ${rtConfig.namaKelurahan}` : undefined;
 
     const pdfBuffer = await pdfService.generateSingleQrActivationCard({

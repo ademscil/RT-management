@@ -19,6 +19,10 @@ import {
   NotificationPriority,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getRtId,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
 
 export const suratRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
@@ -28,11 +32,17 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
   const storageAdapter = new MinioStorageAdapter();
   const sseBroker = (fastify as any).sseBroker as SSEBrokerService;
 
+  // Tenant resolution runs for every route in this module. It is registered as a
+  // plugin-level hook (rather than a per-route preHandler) so no handler can
+  // accidentally omit it and end up querying across communities.
+  fastify.addHook('preHandler', resolveTenantContext);
+
   /**
    * GET /api/v1/surat/templates
    */
-  fastify.get('/templates', { preHandler: [authenticateJwt] }, async (_request, reply) => {
+  fastify.get('/templates', { preHandler: [authenticateJwt] }, async (request, reply) => {
     const templates = await prisma.jenisSuratTemplate.findMany({
+      where: { rtId: getRtId(request) },
       orderBy: { namaSurat: 'asc' },
     });
 
@@ -60,7 +70,7 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
@@ -148,20 +158,37 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({
         success: false,
-        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+        error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
         timestamp: new Date().toISOString(),
       });
     }
 
     const { jenisSuratId, keperluan, keteranganTambahan } = parseResult.data;
     const session = request.userSession!;
+    const rtId = getRtId(request);
 
-    const nomorTiket = `TKT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    // The requested letter type must belong to the caller's tenant — otherwise a
+    // resident could apply using another RT's template (and its legal letterhead).
+    const jenisSurat = await prisma.jenisSuratTemplate.findUnique({
+      where: { id: jenisSuratId },
+    });
+    if (!jenisSurat || jenisSurat.rtId !== rtId) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Jenis surat tidak ditemukan.' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // `nomorTiket` is unique PER TENANT, so the tenant is folded into the prefix
+    // to keep ticket numbers human-meaningful within each community.
+    const nomorTiket = `TKT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const fullKeperluan = keteranganTambahan ? `${keperluan} (${keteranganTambahan})` : keperluan;
 
     const newSurat = await prisma.pengajuanSurat.create({
       data: {
+        rtId,
         nomorTiket,
         pemohonWargaId: session.wargaId,
         kkId: session.kkId,
@@ -208,7 +235,7 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
@@ -276,7 +303,7 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
       if (!parseResult.success) {
         return reply.status(400).send({
           success: false,
-          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.errors[0].message },
+          error: { code: ErrorCode.ERR_VALIDATION, message: parseResult.error.issues[0].message },
           timestamp: new Date().toISOString(),
         });
       }
@@ -452,3 +479,4 @@ export const suratRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 };
+

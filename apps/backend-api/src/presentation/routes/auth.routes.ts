@@ -2,13 +2,22 @@ import type { FastifyPluginAsync } from 'fastify';
 import { hashPassword, verifyPassword } from '../../infrastructure/crypto/password-hasher.js';
 import crypto from 'node:crypto';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
+import { TenantContextService, TenantAccessError } from '../../infrastructure/tenant/tenant-context.service.js';
+import { PlanQuotaService } from '../../infrastructure/tenant/plan-quota.service.js';
 import {
   LoginRequestSchema,
   VerifyRecoveryCodeSchema,
   ErrorCode,
+  TenantQuotaResource,
+  TenantResolutionSource,
   UserRole,
 } from '@simrt/shared-types';
 import { authenticateJwt, requireRoles } from '../middlewares/auth.middleware.js';
+import {
+  getTenantContext,
+  requireActiveTenant,
+  resolveTenantContext,
+} from '../middlewares/tenant.middleware.js';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = PrismaService.getInstance();
@@ -23,7 +32,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         success: false,
         error: {
           code: ErrorCode.ERR_VALIDATION,
-          message: parseResult.error.errors[0].message,
+          message: parseResult.error.issues[0].message,
         },
         timestamp: new Date().toISOString(),
       });
@@ -31,10 +40,83 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { username, password } = parseResult.data;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: { warga: { include: { kk: true } } },
+    // Optional tenant hints — required when the same username exists in more
+    // than one RT (username is unique PER TENANT, not globally).
+    const rawBody = (request.body as any) || {};
+    const assertedRtId: string | undefined =
+      typeof rawBody.rtId === 'string' && rawBody.rtId.trim() ? rawBody.rtId.trim() : undefined;
+    const assertedSlug: string | undefined =
+      typeof rawBody.rtSlug === 'string' && rawBody.rtSlug.trim()
+        ? rawBody.rtSlug.trim().toLowerCase()
+        : undefined;
+
+    let scopedRtId: string | undefined;
+    if (assertedRtId) {
+      const ctx = await TenantContextService.resolve(
+        prisma,
+        assertedRtId,
+        TenantResolutionSource.JWT_CLAIM
+      );
+      if (!ctx) {
+        return reply.status(401).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_TENANT_REQUIRED,
+            message: 'Komunitas RT yang Anda pilih tidak ditemukan.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+      scopedRtId = ctx.rtId;
+    } else if (assertedSlug) {
+      const ctx = await TenantContextService.resolveBySlug(
+        prisma,
+        assertedSlug,
+        TenantResolutionSource.JWT_CLAIM
+      );
+      if (!ctx) {
+        return reply.status(401).send({
+          success: false,
+          error: {
+            code: ErrorCode.ERR_TENANT_REQUIRED,
+            message: 'Komunitas RT yang Anda pilih tidak ditemukan.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+      scopedRtId = ctx.rtId;
+    }
+
+    // An unscoped lookup may legitimately match accounts in several RTs. We
+    // refuse and ask the resident to select their community rather than
+    // guessing — guessing is how cross-tenant sessions get issued.
+    const candidates = await prisma.user.findMany({
+      where: {
+        username,
+        ...(scopedRtId ? { rtId: scopedRtId } : {}),
+      },
+      include: { warga: { include: { kk: true } }, rt: true },
+      take: 3,
     });
+
+    if (candidates.length > 1) {
+      return reply.status(409).send({
+        success: false,
+        error: {
+          code: ErrorCode.ERR_TENANT_REQUIRED,
+          message:
+            'Username ini terdaftar pada lebih dari satu komunitas RT. Silakan pilih komunitas RT Anda terlebih dahulu.',
+          details: candidates.map((c) => ({
+            rtId: c.rtId,
+            rtSlug: c.rt.slug,
+            display: `RT ${c.rt.kodeRt} / RW ${c.rt.kodeRw} — Kel. ${c.rt.namaKelurahan}, ${c.rt.namaKota}`,
+          })),
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const user = candidates[0];
 
     if (!user) {
       return reply.status(401).send({
@@ -107,17 +189,24 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    // Generate JWT Access & Refresh Tokens
+    // Generate JWT Access & Refresh Tokens.
+    // `rtId` is the AUTHORITATIVE tenant scope — signed, so unforgeable, and it
+    // is what `resolveTenantContext` trusts for every subsequent request.
     const sessionPayload = {
       userId: user.id,
       wargaId: user.wargaId,
       kkId: user.warga.kkId,
       username: user.username,
       role: user.role as UserRole,
+      rtId: user.rtId,
+      rtSlug: user.rt.slug,
     };
 
     const accessToken = fastify.jwt.sign(sessionPayload, { expiresIn: '7d' });
-    const refreshToken = fastify.jwt.sign({ userId: user.id }, { expiresIn: '30d' });
+    const refreshToken = fastify.jwt.sign(
+      { userId: user.id, rtId: user.rtId },
+      { expiresIn: '30d' }
+    );
 
     return reply.send({
       success: true,
@@ -131,6 +220,16 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           namaLengkap: user.warga.namaLengkap,
           kkId: user.warga.kkId,
           wargaId: user.wargaId,
+          rtId: user.rtId,
+          rtSlug: user.rt.slug,
+        },
+        tenant: {
+          rtId: user.rtId,
+          slug: user.rt.slug,
+          planCode: user.rt.planCode,
+          status: user.rt.status,
+          displayTitle: `RT ${user.rt.kodeRt} / RW ${user.rt.kodeRw}`,
+          displaySub: `Kel. ${user.rt.namaKelurahan}, Kec. ${user.rt.namaKecamatan}, ${user.rt.namaKota}`,
         },
       },
       timestamp: new Date().toISOString(),
@@ -251,24 +350,31 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // Auto-generate clean username if omitted by resident
+    // Auto-generate clean username if omitted by resident.
+    // Username uniqueness is scoped to the invite's tenant — a resident of RT A
+    // must be free to pick the same username as a resident of RT B.
+    const inviteRtId: string = invite.rtId;
     if (!username || typeof username !== 'string' || username.trim().length < 3) {
       const cleanBlok = invite.rumah.kodeBlok.toLowerCase().replace(/[^a-z0-9]/g, '');
       const cleanNo = invite.rumah.nomorRumah.toLowerCase().replace(/[^a-z0-9]/g, '');
       username = `warga_${cleanBlok}_${cleanNo}`;
-      const existing = await prisma.user.findUnique({ where: { username } });
+      const existing = await prisma.user.findUnique({
+        where: { rtId_username: { rtId: inviteRtId, username: String(username) } },
+      });
       if (existing) {
         username = `${username}_${Math.floor(100 + Math.random() * 900)}`;
       }
     } else {
       username = username.trim();
-      const existingUser = await prisma.user.findUnique({ where: { username } });
+      const existingUser = await prisma.user.findUnique({
+        where: { rtId_username: { rtId: inviteRtId, username: String(username) } },
+      });
       if (existingUser) {
         return reply.status(409).send({
           success: false,
           error: {
             code: ErrorCode.ERR_CONFLICT,
-            message: 'Username sudah digunakan. Silakan pilih username lain.',
+            message: 'Username sudah digunakan di komunitas RT ini. Silakan pilih username lain.',
           },
           timestamp: new Date().toISOString(),
         });
@@ -296,6 +402,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const result = await prisma.$transaction(async (tx: any) => {
       const newUser = await tx.user.create({
         data: {
+          rtId: inviteRtId,
           wargaId: kepalaWarga.id,
           username,
           passwordHash,
@@ -312,6 +419,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         const codeHash = await hashPassword(rawCode);
         await tx.recoveryCode.create({
           data: {
+            rtId: inviteRtId,
             userId: newUser.id,
             codeHash,
           },
@@ -330,16 +438,28 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return { newUser, rawRecoveryCodes };
     });
 
+    const inviteTenantSlug = (
+      await prisma.rukunTetanggaConfig.findUnique({
+        where: { id: inviteRtId },
+        select: { slug: true },
+      })
+    )?.slug;
+
     const sessionPayload = {
       userId: result.newUser.id,
       wargaId: kepalaWarga.id,
       kkId: invite.kkId,
       username: result.newUser.username,
       role: UserRole.WARGA,
+      rtId: inviteRtId,
+      rtSlug: inviteTenantSlug,
     };
 
     const accessToken = fastify.jwt.sign(sessionPayload, { expiresIn: '7d' });
-    const refreshToken = fastify.jwt.sign({ userId: result.newUser.id }, { expiresIn: '30d' });
+    const refreshToken = fastify.jwt.sign(
+      { userId: result.newUser.id, rtId: inviteRtId },
+      { expiresIn: '30d' }
+    );
 
     return reply.send({
       success: true,
@@ -352,6 +472,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           username: result.newUser.username,
           role: result.newUser.role,
           namaLengkap: kepalaWarga.namaLengkap,
+          rtId: inviteRtId,
         },
       },
       timestamp: new Date().toISOString(),
@@ -368,7 +489,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         success: false,
         error: {
           code: ErrorCode.ERR_VALIDATION,
-          message: parseResult.error.errors[0].message,
+          message: parseResult.error.issues[0].message,
         },
         timestamp: new Date().toISOString(),
       });
@@ -376,10 +497,47 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { username, recoveryCode, newPassword } = parseResult.data;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    // Recovery must be tenant-scoped: `username` is unique only WITHIN an RT,
+    // so an unscoped lookup could reset another community's account.
+    const recoveryBody = (request.body as any) || {};
+    const recRtId =
+      typeof recoveryBody.rtId === 'string' && recoveryBody.rtId.trim()
+        ? recoveryBody.rtId.trim()
+        : undefined;
+    const recSlug =
+      typeof recoveryBody.rtSlug === 'string' && recoveryBody.rtSlug.trim()
+        ? recoveryBody.rtSlug.trim().toLowerCase()
+        : undefined;
+
+    let recScopedRtId: string | undefined = recRtId;
+    if (!recScopedRtId && recSlug) {
+      const ctx = await TenantContextService.resolveBySlug(
+        prisma,
+        recSlug,
+        TenantResolutionSource.JWT_CLAIM
+      );
+      recScopedRtId = ctx?.rtId;
+    }
+
+    const recoveryMatches = await prisma.user.findMany({
+      where: { username, ...(recScopedRtId ? { rtId: recScopedRtId } : {}) },
       include: { recoveryCodes: { where: { isUsed: false } } },
+      take: 3,
     });
+
+    if (recoveryMatches.length > 1) {
+      return reply.status(409).send({
+        success: false,
+        error: {
+          code: ErrorCode.ERR_TENANT_REQUIRED,
+          message:
+            'Username ini terdaftar pada lebih dari satu komunitas RT. Sertakan rtSlug komunitas RT Anda.',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const user = recoveryMatches[0];
 
     if (!user) {
       return reply.status(404).send({
@@ -498,9 +656,17 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post(
     '/create-user-account',
-    { preHandler: [authenticateJwt, requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS])] },
+    {
+      preHandler: [
+        authenticateJwt,
+        resolveTenantContext,
+        requireActiveTenant,
+        requireRoles([UserRole.KETUA_RT, UserRole.SEKRETARIS]),
+      ],
+    },
     async (request, reply) => {
       const { wargaId, username, password, role } = (request.body as any) || {};
+      const tenant = getTenantContext(request);
 
       if (!wargaId || !username) {
         return reply.status(400).send({
@@ -524,7 +690,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         include: { users: true, kk: { include: { rumah: true } } },
       });
 
-      if (!warga) {
+      // Anti-IDOR: an RT may only provision accounts for its OWN residents.
+      if (!warga || warga.rtId !== tenant.rtId) {
         return reply.status(404).send({
           success: false,
           error: { code: ErrorCode.ERR_NOT_FOUND, message: 'Data warga tidak ditemukan.' },
@@ -548,7 +715,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
+      const existingUser = await prisma.user.findUnique({
+        where: { rtId_username: { rtId: tenant.rtId, username: cleanUsername } },
+      });
       if (existingUser && existingUser.wargaId !== wargaId) {
         return reply.status(409).send({
           success: false,
@@ -568,6 +737,31 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
         targetRole = role as UserRole;
+      }
+
+      // Growing the number of PRIVILEGED accounts consumes the tenant's plan
+      // quota. Resident (WARGA) accounts are unlimited.
+      const promotingToPrivileged =
+        targetRole !== UserRole.WARGA &&
+        (!warga.users || warga.users.role === UserRole.WARGA);
+      if (promotingToPrivileged) {
+        try {
+          await PlanQuotaService.assertAvailable(
+            prisma,
+            tenant,
+            TenantQuotaResource.ADMIN_USERS,
+            1
+          );
+        } catch (err) {
+          if (err instanceof TenantAccessError) {
+            return reply.status(err.statusCode).send({
+              success: false,
+              error: { code: err.code, message: err.message },
+              timestamp: new Date().toISOString(),
+            });
+          }
+          throw err;
+        }
       }
 
       let user;
@@ -595,6 +789,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         user = await prisma.$transaction(async (tx) => {
           const newUser = await tx.user.create({
             data: {
+              rtId: tenant.rtId,
               wargaId: warga.id,
               username: cleanUsername,
               passwordHash,
@@ -609,6 +804,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             const codeHash = await hashPassword(rawCode);
             await tx.recoveryCode.create({
               data: {
+                rtId: tenant.rtId,
                 userId: newUser.id,
                 codeHash,
               },
@@ -623,6 +819,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         success: true,
         data: {
           id: user.id,
+          rtId: user.rtId,
           username: user.username,
           namaLengkap: warga.namaLengkap,
           role: user.role,
@@ -632,3 +829,4 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 };
+

@@ -8,6 +8,7 @@
     "apps/*",
     "packages/*"
   ],
+  "//overrides": "Dependency security overrides live in pnpm-workspace.yaml. pnpm >= 10 IGNORES package.json `pnpm.overrides`; keeping a copy here would be misleading.",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
@@ -19,12 +20,6 @@
     "db:migrate": "pnpm --filter backend-api db:migrate",
     "db:seed": "pnpm --filter backend-api db:seed",
     "postinstall": "pnpm --filter backend-api db:generate"
-  },
-  "overrides": {
-    "fast-jwt": ">=6.3.0",
-    "tar": ">=7.5.21",
-    "sharp": ">=0.35.5",
-    "deepmerge-ts": ">=8.0.0"
   },
   "devDependencies": {
     "turbo": "^2.4.0",

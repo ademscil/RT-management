@@ -10,12 +10,31 @@ export enum UserRole {
 
 export const UserRoleSchema = z.nativeEnum(UserRole);
 
+/** Roles permitted to mutate tenant data (as opposed to read-only residents). */
+export const TENANT_ADMIN_ROLES: readonly UserRole[] = [
+  UserRole.SUPERUSER,
+  UserRole.KETUA_RT,
+  UserRole.SEKRETARIS,
+  UserRole.BENDAHARA,
+];
+
+/**
+ * JWT session payload.
+ *
+ * `rtId` is the AUTHORITATIVE tenant scope. It is signed, so a client cannot
+ * forge it — this is what makes row-level tenant isolation trustworthy.
+ * `rtSlug` is carried for cheap display/logging without a DB round-trip.
+ */
 export interface JwtSessionPayload {
   userId: string;
   wargaId: string;
   kkId: string;
   username: string;
   role: UserRole;
+  /** Canonical tenant id (`RukunTetanggaConfig.id`). */
+  rtId: string;
+  /** Tenant slug, for logging and display only. Never used for authorization. */
+  rtSlug?: string;
   iat?: number;
   exp?: number;
 }
